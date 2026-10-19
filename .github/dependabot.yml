@@ -1,0 +1,35 @@
+# Dependabot: monitoramento continuo das dependencias, sem job de CI.
+# Abre PRs automaticamente; cada PR passa pela mesma esteira (CI, SAST,
+# SCA, imagem) antes de poder ser mergeado.
+version: 2
+
+updates:
+  # requirements.in + requirements.txt (pip-compile com hashes): o
+  # Dependabot atualiza os dois e regenera os hashes.
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "security"]
+    commit-message:
+      prefix: "sca"
+      include: "scope"
+
+  # Actions pinadas por SHA: o Dependabot atualiza o SHA e o comentario de versao.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels: ["dependencies", "ci"]
+    commit-message:
+      prefix: "ci"
+
+  # Imagem base do Dockerfile (tag + digest).
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels: ["dependencies", "docker"]
+    commit-message:
+      prefix: "build"
