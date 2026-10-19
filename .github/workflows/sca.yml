@@ -1,0 +1,71 @@
+# SCA - auditoria das dependencias de terceiros.
+# pip-audit e o gate principal (PyPA Advisory Database); o Trivy em modo fs
+# e uma segunda camada com outras fontes de vulnerabilidade.
+# O agendamento diario pega CVEs publicadas DEPOIS do ultimo merge, mesmo
+# sem nenhuma mudanca no codigo.
+name: SCA
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 9 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sca-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PIP_AUDIT_VERSION: "2.10.1"
+  TRIVY_IMAGE: "aquasec/trivy:0.76.0@sha256:2416d1f74045b57274df1a340eee6b510cacd73c66a6ccb8da092b117eb7d222"
+  TRIVY_SEVERITY: "HIGH,CRITICAL"
+
+jobs:
+  pip-audit:
+    name: SCA - pip-audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do codigo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: ./.github/actions/setup-python-deps
+        with:
+          requirements: ""
+
+      - name: Instalar pip-audit
+        run: pip install "pip-audit==${PIP_AUDIT_VERSION}"
+
+      # Cada arquivo e auditado separadamente: requirements.txt usa hashes
+      # (--require-hashes e ativado automaticamente) e nao pode ser misturado
+      # com um arquivo sem hashes na mesma resolucao.
+      - name: Auditar dependencias de producao (gate)
+        run: pip-audit -r requirements.txt --desc on
+
+      - name: Auditar dependencias de desenvolvimento/CI (gate)
+        run: pip-audit -r requirements-dev.txt --desc on
+
+  trivy-fs:
+    name: SCA - Trivy fs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do codigo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Trivy fs nas dependencias (gate)
+        run: |
+          docker run --rm -v "$PWD:/src:ro" "$TRIVY_IMAGE" fs \
+            --scanners vuln \
+            --severity "$TRIVY_SEVERITY" \
+            --exit-code 1 \
+            /src
