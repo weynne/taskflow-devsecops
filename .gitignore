@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# Banco SQLite local e dados de execucao
+*.db
+data/
+
+# Segredos locais - NUNCA versionar
+.env
+.env.*
+!.env.example
+
+# Relatorios gerados localmente pelos scanners
+*.sarif
+reports/

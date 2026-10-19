@@ -1,0 +1,29 @@
+# Donos do codigo do repositorio do grupo WJD.
+# Combinado com "Require review from Code Owners", torna a revisao obrigatoria.
+#
+# A ORDEM IMPORTA: vale a ultima regra que corresponde ao caminho.
+#
+# Toda regra lista no minimo dois donos: o autor de um pull request nao pode
+# aprovar o proprio pull request, entao uma regra de dono unico deixaria as
+# mudancas desse dono sem revisor possivel, travando o merge.
+
+# Repositorio inteiro: todo pull request precisa do aval de um colega.
+*                       @weynne @diegotavares16 @jessicacamarco
+
+# Esteira: workflows, action composta e Dependabot.
+/.github/               @weynne @jessicacamarco
+
+# SAST e secret scanning: codigo da aplicacao, testes e regras do Gitleaks.
+/app.py                 @jessicacamarco @weynne
+/wsgi.py                @jessicacamarco @weynne
+/templates/             @jessicacamarco @weynne
+/tests/                 @jessicacamarco @weynne
+/.gitleaks.toml         @jessicacamarco @weynne
+
+# SCA e hardening do container: dependencias, imagem e runtime.
+/requirements.in        @diegotavares16 @weynne
+/requirements.txt       @diegotavares16 @weynne
+/Dockerfile             @diegotavares16 @weynne
+/.dockerignore          @diegotavares16 @weynne
+/.trivyignore           @diegotavares16 @weynne
+/scripts/               @diegotavares16 @weynne

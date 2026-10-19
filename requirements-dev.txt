@@ -1,0 +1,2 @@
+# Dependencias de desenvolvimento/CI (nao vao para a imagem de producao).
+ruff==0.17.1
