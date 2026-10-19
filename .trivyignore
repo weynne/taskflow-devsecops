@@ -1,0 +1,7 @@
+# Excecoes do Trivy. Cada linha precisa de justificativa e data de revisao.
+# Formato:
+#   # <motivo> - responsavel - revisar em AAAA-MM-DD
+#   CVE-AAAA-NNNNN
+#
+# Vazio de proposito: o gate usa --ignore-unfixed, entao so CVEs COM correcao
+# disponivel bloqueiam, e hoje nao ha nenhuma (ver docs/hardening.md).

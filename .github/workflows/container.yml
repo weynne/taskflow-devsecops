@@ -1,0 +1,121 @@
+# Build da imagem + gates de seguranca do container.
+#  1. Trivy config : mas praticas no Dockerfile (misconfiguration)
+#  2. Trivy image  : CVEs HIGH/CRITICAL com correcao disponivel
+#  3. Smoke test   : a imagem sobe com as flags de runtime seguras e responde
+# O agendamento semanal reescaneia a imagem: CVEs novas aparecem mesmo sem
+# mudanca no codigo.
+name: Container
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 10 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: container-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOCKERFILE: Dockerfile
+  IMAGE: taskflow:ci-${{ github.sha }}
+  TRIVY_IMAGE: "aquasec/trivy:0.76.0@sha256:2416d1f74045b57274df1a340eee6b510cacd73c66a6ccb8da092b117eb7d222"
+  TRIVY_SEVERITY: "HIGH,CRITICAL"
+  APP_PORT: "5000"
+
+jobs:
+  image:
+    name: Imagem - build, Trivy e smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do codigo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Trivy config no Dockerfile (gate)
+        run: |
+          docker run --rm -v "$PWD:/src:ro" "$TRIVY_IMAGE" config \
+            --severity "$TRIVY_SEVERITY" --exit-code 1 /src
+
+      - name: Build da imagem
+        run: docker build --pull -f "$DOCKERFILE" -t "$IMAGE" .
+
+      # --ignore-unfixed: CVEs sem correcao publicada pela distribuicao nao
+      # bloqueiam (nao ha o que atualizar). Elas continuam no relatorio
+      # completo abaixo e sao reavaliadas no scan semanal. Excecoes pontuais
+      # com correcao disponivel vao para .trivyignore, sempre com justificativa.
+      - name: Trivy image (gate HIGH/CRITICAL corrigiveis)
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$PWD:/src:ro" \
+            "$TRIVY_IMAGE" image \
+              --severity "$TRIVY_SEVERITY" \
+              --ignore-unfixed \
+              --ignorefile /src/.trivyignore \
+              --exit-code 1 \
+              "$IMAGE"
+
+      - name: Relatorio completo do Trivy (informativo)
+        if: always()
+        run: |
+          mkdir -p reports
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            "$TRIVY_IMAGE" image --format table "$IMAGE" > reports/trivy-image.txt || true
+          docker history --no-trunc "$IMAGE" > reports/docker-history.txt || true
+
+      - name: Publicar relatorios
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: container-reports
+          path: reports/
+          retention-days: 14
+
+      - name: Nenhum segredo nas camadas da imagem
+        run: |
+          if docker history --no-trunc --format '{{.CreatedBy}}' "$IMAGE" \
+              | grep -Ei '(PASSWORD|SECRET|TOKEN)[A-Z_]*='; then
+            echo "::error::Segredo encontrado no historico da imagem"
+            exit 1
+          fi
+
+      - name: Smoke test com flags de runtime seguras
+        run: |
+          # Segredos efemeros, gerados so para este run (nunca armazenados).
+          TASKFLOW_SECRET_KEY="$(openssl rand -hex 32)"
+          ADMIN_PASSWORD="$(openssl rand -hex 16)"
+          echo "::add-mask::$TASKFLOW_SECRET_KEY"
+          echo "::add-mask::$ADMIN_PASSWORD"
+          export TASKFLOW_SECRET_KEY ADMIN_PASSWORD
+
+          IMAGE="$IMAGE" HOST_PORT="$APP_PORT" CONTAINER_NAME=taskflow-ci \
+            ENV_FILE=/nonexistent ./scripts/docker-run-seguro.sh
+
+          for _ in $(seq 1 20); do
+            curl -sf "http://127.0.0.1:${APP_PORT}/login" >/dev/null && break
+            sleep 1
+          done
+          curl -sf -o /dev/null "http://127.0.0.1:${APP_PORT}/login"
+
+          test "$(docker exec taskflow-ci id -u)" != "0"
+          if docker exec taskflow-ci touch /app/escrita-proibida; then
+            echo "::error::filesystem raiz do container nao esta read-only"
+            exit 1
+          fi
+          test "$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:${APP_PORT}/debug/info")" = "404"
+          echo "OK: responde, roda como nao-root, rootfs read-only, sem /debug/info"
+
+      - name: Logs do container
+        if: always()
+        run: |
+          docker logs taskflow-ci || true
+          docker stop taskflow-ci || true

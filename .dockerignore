@@ -1,0 +1,20 @@
+# Nada disso deve entrar no contexto de build (e muito menos na imagem).
+.git
+.github
+.gitleaks.toml
+.trivyignore
+.env
+.env.*
+*.db
+data/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+tests/
+docs/
+scripts/
+reports/
+*.md
