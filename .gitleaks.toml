@@ -1,0 +1,52 @@
+# Configuracao do Gitleaks do grupo.
+#
+# 1) Mantemos TODAS as regras padrao (useDefault = true).
+# 2) Adicionamos regras proprias: as regras genericas do Gitleaks NAO
+#    detectaram a SECRET_KEY da TaskFlow original (o valor tem baixa
+#    entropia), entao criamos regras especificas para os dois padroes de
+#    segredo que existem neste projeto.
+# 3) Allowlist restrita aos segredos DIDATICOS da linha de base (ver abaixo).
+
+title = "TaskFlow DevSecOps - gitleaks"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "flask-secret-key-hardcoded"
+description = "SECRET_KEY do Flask com valor literal no codigo"
+regex = '''(?i)SECRET_KEY["']?\]?\s*=\s*["']([^"'\s]{8,})["']'''
+secretGroup = 1
+keywords = ["secret_key"]
+
+[[rules]]
+id = "dockerfile-env-secret"
+description = "Segredo definido via ENV/ARG em Dockerfile (fica gravado nas camadas)"
+regex = '''(?im)^\s*(?:ENV|ARG)\s+\w*(?:PASSWORD|PASSWD|SECRET|TOKEN|API_KEY)\w*\s*[= ]\s*["']?([^\s"']+)'''
+secretGroup = 1
+keywords = ["password", "passwd", "secret", "token", "api_key"]
+path = '''(?i)(^|/)Dockerfile[^/]*$'''
+
+# -----------------------------------------------------------------------------
+# Allowlist ESPECIFICA da linha de base didatica.
+#
+# A SECRET_KEY de app.py e o ADMIN_PASSWORD do Dockerfile da TaskFlow
+# original estao no historico por design da disciplina (commit de
+# importacao da linha de base). Eles ja foram removidos do codigo atual:
+#   - SECRET_KEY agora vem da variavel de ambiente TASKFLOW_SECRET_KEY
+#   - ADMIN_PASSWORD agora e injetado em runtime (docker run -e)
+# Os valores sao publicos (estao no repositorio da disciplina) e nunca foram
+# usados em nenhum ambiente real; nao ha credencial a revogar.
+#
+# A allowlist exige as DUAS condicoes (AND): o achado precisa estar no commit
+# da linha de base E ser exatamente um desses dois valores. Qualquer segredo
+# novo, em qualquer outro commit, continua quebrando o pipeline.
+# -----------------------------------------------------------------------------
+[[allowlists]]
+description = "Segredos didaticos da linha de base da TaskFlow (ja removidos do codigo)"
+condition = "AND"
+commits = ["299955b990ab5475906dc4b637e692ffe547a574"]
+regexes = [
+  '''^s3gr3d0-super-secreto-nao-mude-nunca$''',
+  '''^admin123$''',
+]
