@@ -127,7 +127,7 @@ def login():
         # envia os valores separados do comando SQL, entao um payload como
         # "admin' --" e tratado como dado e nunca altera a estrutura da query.
         db = get_db()
-        cur = db.execute(f"SELECT * FROM users WHERE username = '{username}'")
+        cur = db.execute("SELECT * FROM users WHERE username = ?", (username,))
         user = cur.fetchone()
 
         # Com a senha em hash, a comparacao e feita por check_password_hash.
