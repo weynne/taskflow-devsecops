@@ -17,17 +17,39 @@ Ao longo dos encontros, cada uma dessas falhas sera identificada por uma
 ferramenta especifica da esteira e corrigida em uma versao "fixed" do codigo.
 """
 
+import os
 import sqlite3
 
 from flask import Flask, g, redirect, request, session, url_for
 
-# Vulnerabilidade #3: segredo hardcoded no repositorio.
-# Uma ferramenta de SAST/secret-scanning (ex: Gitleaks, Semgrep) deve
-# sinalizar esta linha como "Hardcoded Secret".
-app = Flask(__name__)
-app.config["SECRET_KEY"] = "s3gr3d0-super-secreto-nao-mude-nunca"
 
-DATABASE = "taskflow.db"
+def _required_env(name):
+    """Le uma variavel de ambiente obrigatoria ou falha na inicializacao.
+
+    Falhar alto e preferivel a cair silenciosamente para um valor fixo,
+    o que reintroduziria o segredo hardcoded de forma escondida.
+    """
+    value = os.environ.get(name)
+    if not value:
+        raise RuntimeError(
+            f"Variavel de ambiente {name} nao foi definida. "
+            f"Configure-a antes de iniciar a aplicacao."
+        )
+    return value
+
+
+app = Flask(__name__)
+
+# CORRIGIDO (SECRET_KEY hardcoded): o segredo vem do ambiente em runtime
+# (export local, secret do repositorio no CI ou docker run -e).
+app.config["SECRET_KEY"] = _required_env("TASKFLOW_SECRET_KEY")
+# Cookie de sessao inacessivel via JavaScript e nao enviado em requisicoes
+# cross-site. SESSION_COOKIE_SECURE deve ser ligado quando houver HTTPS.
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = os.environ.get("TASKFLOW_COOKIE_SECURE") == "1"
+
+DATABASE = os.environ.get("TASKFLOW_DB_PATH", "taskflow.db")
 
 
 def get_db():
