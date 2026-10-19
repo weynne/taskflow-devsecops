@@ -6,7 +6,10 @@ check só aparece para ser marcado como obrigatório depois de rodar ao menos um
 ## 1. Criar o repositório privado e dar acesso ao professor
 
 1. GitHub → **New repository** → nome `taskflow-devsecops` → **Private** → sem README.
-2. **Settings → Collaborators → Add people** → `HardSource` com permissão **Read**.
+2. **Settings → Collaborators → Add people** → `HardSource`.
+   Em repositório de **conta pessoal** não existe o papel *Read*: todo collaborator recebe
+   leitura e escrita (o papel *Read* só existe em organizações). A branch protection, aplicada
+   também a administradores, garante que nada entra na `main` fora de um PR com checks verdes.
 3. Adicione [@jessicacamarco](https://github.com/jessicacamarco) e
    [@diegotavares16](https://github.com/diegotavares16) com permissão **Write**
    (o CODEOWNERS só vale para quem tem Write).

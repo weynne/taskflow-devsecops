@@ -17,6 +17,12 @@ Grupo **WJD** (o mesmo da disciplina de CI/CD,
 Os donos de cada área estão em [`.github/CODEOWNERS`](.github/CODEOWNERS): cada área tem
 o mantenedor ao lado do dono do repositório, e toda regra tem no mínimo dois donos.
 
+**Acesso do professor:** @HardSource foi convidado como collaborator. O repositório é de conta
+pessoal, e nesse tipo de conta o GitHub não oferece o papel *Read*: todo collaborator recebe
+leitura e escrita (*Read* só existe em repositórios de organização). Mesmo assim, ninguém altera
+a `main` fora do fluxo, porque a branch protection exige PR e os 7 checks verdes, inclusive para
+administradores.
+
 ## Visão geral da esteira
 
 ```text
@@ -62,6 +68,23 @@ com a versão vinda do arquivo [`.python-version`](.python-version) (fonte únic
 
 Detalhes e evidências de antes × depois: [`docs/sast-sca.md`](docs/sast-sca.md) e
 [`docs/hardening.md`](docs/hardening.md).
+
+## Evidências de funcionamento
+
+| # | Evidência | Link |
+| --- | --- | --- |
+| 1 | Esteira completa verde na `main` (push após o último merge) | [CI](https://github.com/weynne/taskflow-devsecops/actions/runs/39192460252) · [SAST](https://github.com/weynne/taskflow-devsecops/actions/runs/39192460318) · [SCA](https://github.com/weynne/taskflow-devsecops/actions/runs/39192460202) · [Container](https://github.com/weynne/taskflow-devsecops/actions/runs/39192460352) |
+| 2 | Shift-left: PR reintroduz SQL Injection no login, ruff (`S608`) e Semgrep (`tainted-sql-string`) ficam vermelhos | [PR #5](https://github.com/weynne/taskflow-devsecops/pull/5) · [CI vermelho](https://github.com/weynne/taskflow-devsecops/actions/runs/39192182756) · [SAST vermelho](https://github.com/weynne/taskflow-devsecops/actions/runs/39192182787) |
+| 3 | Merge recusado pela proteção da `main` enquanto os gates estavam vermelhos | [`docs/evidencias/demo-merge-bloqueado.txt`](docs/evidencias/demo-merge-bloqueado.txt) |
+| 4 | O mesmo PR corrigido (revert), com os 7 checks verdes, e só então mergeado | [PR #5](https://github.com/weynne/taskflow-devsecops/pull/5) · [CI verde](https://github.com/weynne/taskflow-devsecops/actions/runs/39192311284) · [SAST verde](https://github.com/weynne/taskflow-devsecops/actions/runs/39192311400) |
+| 5 | Trivy como gate da imagem + smoke test com runtime seguro no runner | [Container no PR #4](https://github.com/weynne/taskflow-devsecops/actions/runs/39192024740) (o artefato `container-reports` traz o relatório completo e o `docker history`) |
+| 6 | Construção incremental por PR, um por etapa da esteira | [#1 CI](https://github.com/weynne/taskflow-devsecops/pull/1) · [#2 SAST](https://github.com/weynne/taskflow-devsecops/pull/2) · [#3 SCA](https://github.com/weynne/taskflow-devsecops/pull/3) · [#4 Container](https://github.com/weynne/taskflow-devsecops/pull/4) |
+
+**Branch protection da `main`** (Settings → Branches): PR obrigatório; os 7 checks
+(`Build e lint (ruff)`, `Testes (pytest)`, `SAST - Semgrep`, `Secret Scanning - Gitleaks`,
+`SCA - pip-audit`, `SCA - Trivy fs`, `Imagem - build, Trivy e smoke test`) obrigatórios, com
+branch atualizada (`strict`); regras aplicadas também a administradores; force push e deleção
+bloqueados; aprovação de 1 Code Owner exigida.
 
 ## Como rodar a aplicação localmente
 

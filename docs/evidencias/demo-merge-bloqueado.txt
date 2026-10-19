@@ -1,0 +1,4 @@
+$ gh pr merge 5 --merge   # PR com a SQL Injection, checks SAST - Semgrep e Build e lint (ruff) vermelhos
+X Pull request weynne/taskflow-devsecops#5 is not mergeable: the base branch policy prohibits the merge.
+To have the pull request merged after all the requirements have been met, add the `--auto` flag.
+To use administrator privileges to immediately merge the pull request, add the `--admin` flag.
