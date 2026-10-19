@@ -45,11 +45,12 @@ jobs:
       - name: Rodar Semgrep (gate)
         # --error: retorna exit code != 0 se houver qualquer finding.
         run: |
-          configs=""
-          for ruleset in $SEMGREP_RULESETS; do
-            configs="$configs --config=$ruleset"
+          read -ra rulesets <<< "$SEMGREP_RULESETS"
+          args=()
+          for ruleset in "${rulesets[@]}"; do
+            args+=("--config=$ruleset")
           done
-          semgrep scan $configs --metrics=off --error
+          semgrep scan "${args[@]}" --metrics=off --error
 
   gitleaks:
     name: Secret Scanning - Gitleaks
