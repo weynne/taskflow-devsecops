@@ -1,22 +1,38 @@
 # Roteiro da apresentação (~10 min)
 
-Mostrar repositório, PRs e aba Actions, não slides.
+Mostrar repositório, PRs e aba Actions, não slides. Os slides só servem de guia, e os links
+deles abrem direto no GitHub. Uma pessoa conduz a apresentação, e os demais membros do grupo
+podem complementar durante a fala.
 
-| Tempo | Bloco | Quem |
+| # | Bloco | O que mostrar |
 | --- | --- | --- |
-| 0:00–1:00 | Contexto: grupo, membros e papéis | Weynne |
-| 1:00–5:00 | Demo ao vivo do shift-left (abaixo) | Jéssica |
-| 5:00–7:00 | Antes × depois (Trivy, Semgrep, pip-audit) | Diego |
-| 7:00–9:00 | Decisões técnicas | Jéssica (Gitleaks/Semgrep) e Diego (Trivy) |
-| 9:00–10:00 | Aprendizado mais impactante | todos |
+| 1 | Contexto e matriz de responsabilidades | grupo WJD e as áreas do [`CODEOWNERS`](../.github/CODEOWNERS) |
+| 2 | A esteira | aba **Actions** (4 workflows verdes na `main`) e **Settings → Branches** (7 checks obrigatórios) |
+| 3 | Demo ao vivo do shift-left | PR com falha → gate vermelho → merge bloqueado → correção → verde (abaixo) |
+| 4 | Antes × depois | números do Trivy, Semgrep, Gitleaks e pip-audit (abaixo) |
+| 5 | Decisões técnicas | uma ou duas da lista abaixo |
+| 6 | Aprendizado mais impactante | ver o fim deste arquivo |
+
+## Matriz de responsabilidades (CODEOWNERS)
+
+| Code owner | Área | Caminhos |
+| --- | --- | --- |
+| Weynne Guimarães ([@weynne](https://github.com/weynne)) | Dono do repositório e da esteira | todo o repositório, `/.github/` |
+| Jéssica Camarço ([@jessicacamarco](https://github.com/jessicacamarco)) | Aplicação, SAST e secret scanning | `app.py`, `wsgi.py`, `templates/`, `tests/`, `.gitleaks.toml`, `/.github/` |
+| Diego Tavares ([@diegotavares16](https://github.com/diegotavares16)) | Dependências e container | `requirements.*`, `Dockerfile`, `.dockerignore`, `.trivyignore`, `scripts/` |
+
+Toda regra tem dois donos, então quem abre o PR nunca é o único revisor possível.
 
 ## Demo do shift-left (preparar a branch ANTES da aula)
+
+O mesmo ciclo já está registrado no [PR #5](https://github.com/weynne/taskflow-devsecops/pull/5):
+use-o como referência e como plano B. Ao vivo, usa-se uma branch nova.
 
 1. Criar a branch com a falha (reintroduz uma SQL Injection no login):
 
    ```bash
    git switch main && git pull
-   git switch -c demo/shift-left-sqli
+   git switch -c demo/sqli-ao-vivo
    python3 - <<'PY'
    from pathlib import Path
    p = Path("app.py"); s = p.read_text()
@@ -27,7 +43,7 @@ Mostrar repositório, PRs e aba Actions, não slides.
    p.write_text(s)
    PY
    git commit -am "feat: simplifica consulta de usuario no login"
-   git push -u origin demo/shift-left-sqli
+   git push -u origin demo/sqli-ao-vivo
    ```
 
 2. Abrir o PR para a `main` e mostrar ao vivo:
@@ -46,15 +62,17 @@ Mostrar repositório, PRs e aba Actions, não slides.
    git push
    ```
 
-   Os checks ficam verdes, mas o merge **continua bloqueado** até um CODEOWNER aprovar
-   (fase 2 da branch protection, ligada antes da entrega). Jéssica ou Diego aprovam ao vivo,
-   e o merge é liberado: gate automático e revisão humana, os dois em sequência.
+   Os checks ficam verdes, mas o merge **continua bloqueado** até um Code Owner aprovar
+   (fase 2 da branch protection, ligada antes da entrega). Como o autor não pode aprovar o
+   próprio PR, combine antes com outro Code Owner (Jéssica ou Diego) para aprovar no momento
+   da demo: gate automático e revisão humana, os dois em sequência.
 
    Antes da aula, confira em **Settings → Branches** que "Require approvals" e
    "Require review from Code Owners" estão marcados (ver [github-setup.md](github-setup.md#fase-2--entrega-depois-do-pr-5-antes-de-enviar-ao-professor)).
 
-Plano B, se a internet falhar: rodar localmente `semgrep scan --config=p/flask --error`
-e `pytest` na branch da demo.
+Plano B, se a internet falhar: mostrar o [PR #5](https://github.com/weynne/taskflow-devsecops/pull/5)
+já registrado, a saída em [`evidencias/demo-merge-bloqueado.txt`](evidencias/demo-merge-bloqueado.txt)
+ou rodar localmente `semgrep scan --config=p/flask --error` na branch da demo.
 
 ## Antes × depois (números para citar)
 
@@ -78,3 +96,12 @@ e `pytest` na branch da demo.
    virou a segunda camada de SAST.
 4. **O material de referência já estava desatualizado**: Werkzeug 3.0.6 tinha CVEs novas,
    então fomos para 3.1.9 e travamos a árvore inteira com hashes.
+
+## Aprendizados para fechar (escolher um)
+
+- Sem *required checks*, o pipeline vermelho é só decoração: o gate é a configuração da `main`,
+  não o YAML.
+- Scanner também erra para os dois lados: falso negativo no Semgrep e no Gitleaks, falso
+  positivo no fingerprint GPG. Verde só vale se for honesto.
+- "Corrigido hoje" expira: a versão segura do material de referência já tinha CVE meses
+  depois. Por isso SCA agendado + Dependabot.
