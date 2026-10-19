@@ -35,3 +35,18 @@ jobs:
 
       - name: Lint com ruff
         run: ruff check --output-format=github .
+
+  test:
+    name: Testes (pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do codigo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Python e dependencias
+        uses: ./.github/actions/setup-python-deps
+
+      - name: Testes de regressao de seguranca
+        run: python -m pytest -q

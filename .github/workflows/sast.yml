@@ -1,0 +1,82 @@
+# SAST (Semgrep) + Secret Scanning (Gitleaks).
+# Os dois jobs sao gates: qualquer finding falha o job e, com branch
+# protection exigindo estes checks, bloqueia o merge do PR.
+name: SAST
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sast-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SEMGREP_VERSION: "1.181.0"
+  SEMGREP_RULESETS: "p/python p/flask p/security-audit"
+  GITLEAKS_VERSION: "8.30.1"
+  # sha256 do gitleaks_<versao>_linux_x64.tar.gz publicado no release oficial
+  GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+
+jobs:
+  semgrep:
+    name: SAST - Semgrep
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do codigo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Python e Semgrep
+        uses: ./.github/actions/setup-python-deps
+        with:
+          requirements: ""
+
+      - name: Instalar Semgrep
+        run: pip install "semgrep==${SEMGREP_VERSION}"
+
+      - name: Rodar Semgrep (gate)
+        # --error: retorna exit code != 0 se houver qualquer finding.
+        run: |
+          configs=""
+          for ruleset in $SEMGREP_RULESETS; do
+            configs="$configs --config=$ruleset"
+          done
+          semgrep scan $configs --metrics=off --error
+
+  gitleaks:
+    name: Secret Scanning - Gitleaks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do codigo (historico completo)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Historico inteiro: um segredo "apagado" continua nos commits antigos.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Instalar Gitleaks (binario oficial com checksum verificado)
+        run: |
+          tarball="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfL -o "$tarball" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${tarball}"
+          echo "${GITLEAKS_SHA256}  ${tarball}" | sha256sum --check --strict
+          tar -xzf "$tarball" gitleaks
+          sudo install -m 0755 gitleaks /usr/local/bin/gitleaks
+
+      - name: Rodar Gitleaks em todo o historico (gate)
+        # Usa .gitleaks.toml: regras padrao + regras do projeto + allowlist
+        # restrita aos segredos didaticos da linha de base.
+        # --log-opts=HEAD: varre todo o historico ATE o commit validado. Sem
+        # isso o Gitleaks varreria tambem as outras branches baixadas pelo
+        # checkout, com uma configuracao que nao e a delas.
+        run: |
+          gitleaks git . --config .gitleaks.toml --log-opts="HEAD" \
+            --redact --verbose --exit-code 1
