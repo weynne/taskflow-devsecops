@@ -1,20 +1,23 @@
 """
-TaskFlow - Aplicacao de exemplo da disciplina DevSecOps.
+TaskFlow - gerenciador de tarefas da disciplina DevSecOps.
 
-ATENCAO: Esta aplicacao contem vulnerabilidades INTRODUZIDAS DE PROPOSITO
-para fins didaticos. NUNCA use este codigo como referencia de boas praticas
-e NUNCA implante em ambiente de producao ou exposto a internet.
+Versao corrigida pela esteira do grupo a partir da linha de base vulneravel
+(app-exemplo/ do repositorio da disciplina). Cada correcao esta marcada com
+um comentario "CORRIGIDO" no ponto em que a falha existia:
 
-Vulnerabilidades presentes nesta versao (linha de base do curso):
-  1. SQL Injection no login e na busca de tarefas (Modulo 3 - SAST)
-  2. Cross-Site Scripting (XSS) armazenado na descricao da tarefa (Modulo 3/4)
-  3. Segredo de sessao (SECRET_KEY) hardcoded no codigo (Modulo 1/3)
-  4. Senhas armazenadas em texto puro no banco (Modulo 2/3)
-  5. Endpoint de debug exposto publicamente (Modulo 2/4)
-  6. Dependencias com CVEs conhecidas em requirements.txt (Modulo 3 - SCA)
+  1. SQL Injection no login e na busca   -> consultas parametrizadas
+  2. XSS armazenado na descricao          -> templates Jinja2 com autoescape
+  3. SECRET_KEY hardcoded                 -> variavel de ambiente obrigatoria
+  4. Senhas em texto puro                 -> hash (werkzeug.security)
+  5. Endpoint /debug/info exposto         -> removido
+  6. Dependencias com CVEs                -> requirements.txt atualizado (SCA)
+  7. debug=True / servidor de dev         -> debug desligado, gunicorn na imagem
 
-Ao longo dos encontros, cada uma dessas falhas sera identificada por uma
-ferramenta especifica da esteira e corrigida em uma versao "fixed" do codigo.
+Variaveis de ambiente:
+  TASKFLOW_SECRET_KEY  (obrigatoria) chave de assinatura da sessao
+  ADMIN_PASSWORD       (obrigatoria na criacao do banco) senha inicial do admin
+  ALUNO_PASSWORD       (opcional) cria o usuario "aluno" com esta senha
+  TASKFLOW_DB_PATH     (opcional) caminho do SQLite, padrao "taskflow.db"
 """
 
 import os
@@ -192,23 +195,13 @@ def new_task():
     return render_template("new_task.html")
 
 
-# Vulnerabilidade #5: endpoint de debug/diagnostico exposto sem
-# autenticacao, vazando informacoes internas do servidor.
-@app.route("/debug/info")
-def debug_info():
-    import platform
-    import sys
-
-    return {
-        "python_version": sys.version,
-        "platform": platform.platform(),
-        "secret_key": app.config["SECRET_KEY"],
-    }
+# CORRIGIDO (endpoint de debug exposto): a rota /debug/info, que devolvia a
+# SECRET_KEY e detalhes do servidor sem autenticacao, foi removida.
 
 
 if __name__ == "__main__":
+    # Apenas para desenvolvimento local. Em producao a imagem usa gunicorn
+    # (wsgi.py). debug fica desligado e o bind padrao e somente local.
     with app.app_context():
         init_db()
-    # debug=True em producao expoe o Werkzeug debugger interativo
-    # (execucao remota de codigo) - tambem sera sinalizado pelo SAST.
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host=os.environ.get("TASKFLOW_HOST", "127.0.0.1"), port=5000)
