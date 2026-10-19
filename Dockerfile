@@ -1,29 +1,76 @@
-# Dockerfile INSEGURO - linha de base usada no Modulo 2 (Hardening).
-# Cada comentario "# FALHA" indica uma pratica que sera corrigida
-# durante a aula de hardening de containers.
+# syntax=docker/dockerfile:1
+# Dockerfile endurecido da TaskFlow. Cada "CORRIGIDO (FALHA N)" referencia a
+# falha correspondente do Dockerfile original da linha de base.
 
-# FALHA 1: tag "latest" nao fixada -> build nao reprodutivel e pode
-# puxar uma imagem base com vulnerabilidades novas sem aviso.
-FROM python:latest
-#FROM python:3.12-slim
+# -----------------------------------------------------------------------------
+# Estagio 1: build - instala as dependencias em um virtualenv isolado
+# -----------------------------------------------------------------------------
+# CORRIGIDO (FALHA 1): imagem minima (slim) com tag fixa E digest imutavel.
+# O digest garante que o build de hoje e o de amanha usam exatamente a mesma
+# imagem base; o Dependabot (ecossistema docker) propoe a atualizacao.
+FROM python:3.12-slim@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1 AS build
 
-# FALHA 2: executando como root (nenhum USER definido).
-WORKDIR /app
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1
 
+WORKDIR /build
 COPY requirements.txt .
 
-# FALHA 3: nenhuma verificacao de integridade / hash das dependencias.
-RUN pip install -r requirements.txt
+# CORRIGIDO (FALHA 3): --require-hashes confere o sha256 de cada pacote
+# (requirements.txt e gerado com hashes pelo pip-compile). Um pacote adulterado
+# no indice, ou uma dependencia nao declarada, faz o build falhar.
+# O pip e removido do venv no fim: nao e necessario em runtime.
+RUN python -m venv /opt/venv \
+    && /opt/venv/bin/pip install --no-cache-dir --require-hashes -r requirements.txt \
+    && /opt/venv/bin/pip uninstall -y pip
 
-COPY . .
+# -----------------------------------------------------------------------------
+# Estagio 2: runtime - somente o necessario para executar a aplicacao
+# -----------------------------------------------------------------------------
+FROM python:3.12-slim@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1 AS runtime
 
-# FALHA 4: segredo passado como ARG/ENV fica gravado nas camadas
-# da imagem e pode ser extraido com "docker history".
-ENV ADMIN_PASSWORD=admin123
+ENV PATH="/opt/venv/bin:${PATH}" \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    TASKFLOW_DB_PATH=/app/data/taskflow.db
 
-# FALHA 5: expondo a porta do servidor de desenvolvimento do Flask,
-# que nao e apto para producao.
+# CORRIGIDO (FALHA 2): usuario e grupo dedicados, sem shell e sem privilegios.
+# UID/GID fixos (10001) para poder reforcar com "docker run --user".
+# O pip do sistema tambem e removido da imagem final (menos superficie).
+RUN groupadd --system --gid 10001 taskflow \
+    && useradd --system --uid 10001 --gid taskflow --no-create-home \
+       --home-dir /nonexistent --shell /usr/sbin/nologin taskflow \
+    && python -m pip uninstall -y pip \
+    && mkdir -p /app/data \
+    && chown taskflow:taskflow /app/data
+
+WORKDIR /app
+
+COPY --from=build /opt/venv /opt/venv
+# O codigo pertence ao root e e somente leitura para o usuario da aplicacao:
+# mesmo com execucao de codigo, o processo nao consegue alterar a aplicacao.
+# Apenas /app/data (banco SQLite) e gravavel pelo usuario taskflow.
+COPY app.py wsgi.py ./
+COPY templates/ templates/
+
+# CORRIGIDO (FALHA 4): nenhum segredo em ENV/ARG. TASKFLOW_SECRET_KEY e
+# ADMIN_PASSWORD sao injetados em tempo de execucao (docker run -e / secrets
+# do orquestrador) e por isso nao aparecem em "docker history".
+
+# CORRIGIDO (FALHA 5): EXPOSE apenas documenta a porta; agora quem escuta
+# nela e o gunicorn, nao o servidor de desenvolvimento do Flask.
 EXPOSE 5000
 
-# FALHA 6: container roda com debug habilitado e como root.
-CMD ["python", "app.py"]
+USER taskflow
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+    CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/login', timeout=2)"]
+
+# CORRIGIDO (FALHA 6): servidor WSGI de producao (gunicorn), sem debug e
+# como usuario nao-root. --preload inicializa o banco uma unica vez (wsgi.py).
+# --worker-tmp-dir em /dev/shm permite rodar com filesystem read-only e
+# --no-control-socket desliga o socket de administracao do gunicorn (nao
+# usado aqui; seria mais uma interface exposta dentro do container).
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "--preload", \
+     "--worker-tmp-dir", "/dev/shm", "--no-control-socket", \
+     "--access-logfile", "-", "wsgi:app"]
