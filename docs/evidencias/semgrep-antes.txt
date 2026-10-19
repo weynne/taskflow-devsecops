@@ -1,0 +1,215 @@
+Unable to find image 'semgrep/semgrep:1.181.0@sha256:81474464c1f07483ba0682a44787fd93c91397419762a04abe2bafaae396304b' locally
+docker.io/semgrep/semgrep@sha256:81474464c1f07483ba0682a44787fd93c91397419762a04abe2bafaae396304b: Pulling from semgrep/semgrep
+cbddf3e1f882: Pulling fs layer
+497ae349da22: Pulling fs layer
+d7eadebbfb92: Pulling fs layer
+8ea39ab73cb6: Pulling fs layer
+db077250081f: Pulling fs layer
+faa7e6ed215c: Pulling fs layer
+74ed948917d4: Pulling fs layer
+d0c1d894c237: Pulling fs layer
+e2726e8d8ea1: Pulling fs layer
+71c4219ff86d: Pulling fs layer
+febdc62173b1: Pulling fs layer
+bd9ddc54bea9: Pulling fs layer
+0adf7bbfc6ed: Pulling fs layer
+febdc62173b1: Download complete
+e2726e8d8ea1: Download complete
+8ea39ab73cb6: Download complete
+faa7e6ed215c: Download complete
+d7eadebbfb92: Download complete
+71c4219ff86d: Download complete
+497ae349da22: Download complete
+d0c1d894c237: Download complete
+d0c1d894c237: Pull complete
+db077250081f: Download complete
+cbddf3e1f882: Download complete
+bd9ddc54bea9: Download complete
+71c4219ff86d: Pull complete
+bd9ddc54bea9: Pull complete
+d7eadebbfb92: Pull complete
+2e2c83e68992: Download complete
+74ed948917d4: Download complete
+74ed948917d4: Pull complete
+0adf7bbfc6ed: Download complete
+0adf7bbfc6ed: Pull complete
+febdc62173b1: Pull complete
+8ea39ab73cb6: Pull complete
+497ae349da22: Pull complete
+db077250081f: Pull complete
+e2726e8d8ea1: Pull complete
+faa7e6ed215c: Pull complete
+cbddf3e1f882: Pull complete
+Digest: sha256:81474464c1f07483ba0682a44787fd93c91397419762a04abe2bafaae396304b
+Status: Downloaded newer image for semgrep/semgrep@sha256:81474464c1f07483ba0682a44787fd93c91397419762a04abe2bafaae396304b
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 4 files tracked by git with 346 Code rules:
+                                                                                                                        
+  Language      Rules   Files          Origin      Rules                                                                
+ ─────────────────────────────        ───────────────────                                                               
+  <multilang>       2       4          Community     346                                                                
+  python          198       1                                                                                           
+  dockerfile        1       1                                                                                           
+                                                                                                                        
+                    
+                    
+┌──────────────────┐
+│ 10 Code Findings │
+└──────────────────┘
+          
+    app.py
+   ❯❯❱ python.flask.security.audit.hardcoded-config.avoid_hardcoded_config_SECRET_KEY
+          ❰❰ Blocking ❱❱
+          Hardcoded variable `SECRET_KEY` detected. Use environment variables or config files instead
+          Details: https://sg.run/Ekde                                                               
+                                                                                                     
+           28┆ app.config["SECRET_KEY"] = "***"
+   
+   ❯❯❱ python.flask.security.injection.tainted-sql-string.tainted-sql-string
+          ❰❰ Blocking ❱❱
+          Detected user input used to manually construct a SQL string. This is usually bad practice because 
+          manual construction could accidentally result in a SQL injection. An attacker could use a SQL     
+          injection to steal or modify contents of the database. Instead, use a parameterized query which is
+          available by default in most database engines. Alternatively, consider using an object-relational 
+          mapper (ORM) such as SQLAlchemy which will protect your queries.                                  
+          Details: https://sg.run/JxZj                                                                      
+                                                                                                            
+          101┆ query = (
+          102┆     "SELECT * FROM users WHERE username = '"
+          103┆     + username
+          104┆     + "' AND password = '"
+          105┆     + password
+          106┆     + "'"
+          107┆ )
+            ⋮┆----------------------------------------
+          145┆ query = (
+          146┆     "SELECT * FROM tasks WHERE user_id = "
+          147┆     + str(session["user_id"])
+          148┆     + " AND title LIKE '%"
+          149┆     + search
+          150┆     + "%'"
+          151┆ )
+   
+    ❯❱ python.django.security.injection.raw-html-format.raw-html-format
+          ❰❰ Blocking ❱❱
+          Detected user input flowing into a manually constructed HTML string. You may be accidentally       
+          bypassing secure methods of rendering HTML by manually constructing HTML and this could create a   
+          cross-site scripting vulnerability, which could let attackers steal sensitive user data. To be sure
+          this is safe, check that the HTML is rendered safely. Otherwise, use templates                     
+          (`django.shortcuts.render`) which will safely render HTML instead.                                 
+          Details: https://sg.run/oYj1                                                                       
+                                                                                                             
+          163┆ items += f"""
+          164┆ <li>
+          165┆     <b>{row['title']}</b> - {row['description']}
+          166┆     {'(feita)' if row['done'] else ''}
+          167┆ </li>
+          168┆ """
+   
+    ❯❱ python.flask.security.injection.raw-html-concat.raw-html-format
+          ❰❰ Blocking ❱❱
+          Detected user input flowing into a manually constructed HTML string. You may be accidentally       
+          bypassing secure methods of rendering HTML by manually constructing HTML and this could create a   
+          cross-site scripting vulnerability, which could let attackers steal sensitive user data. To be sure
+          this is safe, check that the HTML is rendered safely. Otherwise, use templates                     
+          (`flask.render_template`) which will safely render HTML instead.                                   
+          Details: https://sg.run/Pb7e                                                                       
+                                                                                                             
+          163┆ items += f"""
+          164┆ <li>
+          165┆     <b>{row['title']}</b> - {row['description']}
+          166┆     {'(feita)' if row['done'] else ''}
+          167┆ </li>
+          168┆ """
+   
+    ❯❱ python.flask.security.audit.directly-returned-format-string.directly-returned-format-string
+          ❰❰ Blocking ❱❱
+          Detected Flask route directly returning a formatted string. This is subject to cross-site scripting
+          if user input can reach the string. Consider using the template engine instead and rendering pages 
+          with 'render_template()'.                                                                          
+          Details: https://sg.run/Zv6o                                                                       
+                                                                                                             
+          170┆ return f"""
+          171┆ <h1>Minhas tarefas ({session['username']})</h1>
+          172┆ <form method="get">
+          173┆     <input type="text" name="q" placeholder="buscar tarefa">
+          174┆     <input type="submit" value="Buscar">
+          175┆ </form>
+          176┆ <ul>{items}</ul>
+          177┆ <a href="{url_for('new_task')}">Nova tarefa</a> |
+          178┆ <a href="{url_for('logout')}">Sair</a>
+          179┆ """
+   
+    ❯❱ python.django.security.injection.raw-html-format.raw-html-format
+          ❰❰ Blocking ❱❱
+          Detected user input flowing into a manually constructed HTML string. You may be accidentally       
+          bypassing secure methods of rendering HTML by manually constructing HTML and this could create a   
+          cross-site scripting vulnerability, which could let attackers steal sensitive user data. To be sure
+          this is safe, check that the HTML is rendered safely. Otherwise, use templates                     
+          (`django.shortcuts.render`) which will safely render HTML instead.                                 
+          Details: https://sg.run/oYj1                                                                       
+                                                                                                             
+          170┆ return f"""
+          171┆ <h1>Minhas tarefas ({session['username']})</h1>
+          172┆ <form method="get">
+          173┆     <input type="text" name="q" placeholder="buscar tarefa">
+          174┆     <input type="submit" value="Buscar">
+          175┆ </form>
+          176┆ <ul>{items}</ul>
+          177┆ <a href="{url_for('new_task')}">Nova tarefa</a> |
+          178┆ <a href="{url_for('logout')}">Sair</a>
+          179┆ """
+   
+    ❯❱ python.flask.security.injection.raw-html-concat.raw-html-format
+          ❰❰ Blocking ❱❱
+          Detected user input flowing into a manually constructed HTML string. You may be accidentally       
+          bypassing secure methods of rendering HTML by manually constructing HTML and this could create a   
+          cross-site scripting vulnerability, which could let attackers steal sensitive user data. To be sure
+          this is safe, check that the HTML is rendered safely. Otherwise, use templates                     
+          (`flask.render_template`) which will safely render HTML instead.                                   
+          Details: https://sg.run/Pb7e                                                                       
+                                                                                                             
+          170┆ return f"""
+          171┆ <h1>Minhas tarefas ({session['username']})</h1>
+          172┆ <form method="get">
+          173┆     <input type="text" name="q" placeholder="buscar tarefa">
+          174┆     <input type="submit" value="Buscar">
+          175┆ </form>
+          176┆ <ul>{items}</ul>
+          177┆ <a href="{url_for('new_task')}">Nova tarefa</a> |
+          178┆ <a href="{url_for('logout')}">Sair</a>
+          179┆ """
+   
+    ❯❱ python.flask.security.audit.app-run-param-config.avoid_app_run_with_bad_host
+          ❰❰ Blocking ❱❱
+          Running flask app with host 0.0.0.0 could expose the server publicly.
+          Details: https://sg.run/eLby                                         
+                                                                               
+          227┆ app.run(host="0.0.0.0", port=5000, debug=True)
+   
+    ❯❱ python.flask.security.audit.debug-enabled.debug-enabled
+          ❰❰ Blocking ❱❱
+          Detected Flask app with debug=True. Do not deploy to production with this flag enabled as it will   
+          leak sensitive information. Instead, consider using Flask configuration variables or setting 'debug'
+          using system environment variables.                                                                 
+          Details: https://sg.run/dKrd                                                                        
+                                                                                                              
+          227┆ app.run(host="0.0.0.0", port=5000, debug=True)
+
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 10 (10 blocking)
+ • Rules run: 201
+ • Targets scanned: 4
+ • Parsed lines: ~100.0%
+ • Scan was limited to files tracked by git
+ • For a detailed list of skipped files and lines, run semgrep with the --verbose flag
+Ran 201 rules on 4 files: 10 findings.

@@ -50,3 +50,16 @@ regexes = [
   '''^s3gr3d0-super-secreto-nao-mude-nunca$''',
   '''^admin123$''',
 ]
+
+# -----------------------------------------------------------------------------
+# Falso positivo: fingerprint PUBLICO da chave GPG do release manager do Python.
+# A imagem oficial python:3.12-slim define "ENV GPG_KEY=<fingerprint>" para
+# verificar o tarball do Python; isso aparece no "docker history" que guardamos
+# como evidencia. Nao e segredo (e publicado em python.org/downloads). Liberado
+# apenas este valor exato e apenas dentro de docs/evidencias/.
+# -----------------------------------------------------------------------------
+[[allowlists]]
+description = "Fingerprint publico da chave GPG do Python nas evidencias de docker history"
+condition = "AND"
+paths = ['''^docs/evidencias/''']
+regexes = ['''^7169605F62C751356D054A26A821E680E5FA6305$''']
