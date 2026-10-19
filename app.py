@@ -21,6 +21,7 @@ import os
 import sqlite3
 
 from flask import Flask, g, redirect, request, session, url_for
+from werkzeug.security import check_password_hash, generate_password_hash
 
 
 def _required_env(name):
@@ -91,14 +92,16 @@ def init_db():
 
     cur = db.execute("SELECT COUNT(*) AS total FROM users")
     if cur.fetchone()["total"] == 0:
-        # Vulnerabilidade #4: senha em texto puro, sem hashing.
-        db.execute(
-            "INSERT INTO users (username, password) VALUES (?, ?)",
-            ("admin", "admin123"),
-        )
-        db.execute(
-            "INSERT INTO users (username, password) VALUES (?, ?)",
-            ("aluno", "senha123"),
+        # CORRIGIDO (senha em texto puro): o banco guarda apenas o hash
+        # (scrypt com salt aleatorio, padrao do Werkzeug). As senhas iniciais
+        # nao ficam mais no codigo: sao injetadas em runtime.
+        seed_users = [("admin", _required_env("ADMIN_PASSWORD"))]
+        aluno_password = os.environ.get("ALUNO_PASSWORD")
+        if aluno_password:
+            seed_users.append(("aluno", aluno_password))
+        db.executemany(
+            "INSERT OR IGNORE INTO users (username, password) VALUES (?, ?)",
+            [(user, generate_password_hash(pwd)) for user, pwd in seed_users],
         )
         db.commit()
 
@@ -121,13 +124,13 @@ def login():
         # envia os valores separados do comando SQL, entao um payload como
         # "admin' --" e tratado como dado e nunca altera a estrutura da query.
         db = get_db()
-        cur = db.execute(
-            "SELECT * FROM users WHERE username = ? AND password = ?",
-            (username, password),
-        )
+        cur = db.execute("SELECT * FROM users WHERE username = ?", (username,))
         user = cur.fetchone()
 
-        if user:
+        # Com a senha em hash, a comparacao e feita por check_password_hash.
+        if user and check_password_hash(user["password"], password):
+            # Nova sessao a cada login (evita session fixation).
+            session.clear()
             session["user_id"] = user["id"]
             session["username"] = user["username"]
             return redirect(url_for("tasks"))
