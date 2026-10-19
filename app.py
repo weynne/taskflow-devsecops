@@ -20,7 +20,7 @@ ferramenta especifica da esteira e corrigida em uma versao "fixed" do codigo.
 import os
 import sqlite3
 
-from flask import Flask, g, redirect, request, session, url_for
+from flask import Flask, g, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
 
@@ -136,15 +136,7 @@ def login():
             return redirect(url_for("tasks"))
         error = "Usuario ou senha invalidos."
 
-    return f"""
-    <h1>TaskFlow - Login</h1>
-    <form method="post">
-        Usuario: <input type="text" name="username"><br>
-        Senha: <input type="password" name="password"><br>
-        <input type="submit" value="Entrar">
-    </form>
-    <p style="color:red">{error or ""}</p>
-    """
+    return render_template("login.html", error=error)
 
 
 @app.route("/logout")
@@ -173,28 +165,12 @@ def tasks():
             "SELECT * FROM tasks WHERE user_id = ?", (session["user_id"],)
         ).fetchall()
 
-    items = ""
-    for row in rows:
-        # Vulnerabilidade #2: XSS armazenado. A descricao do usuario e
-        # inserida direto no HTML, sem escaping (Jinja2 com | safe
-        # ou f-string manual como aqui tem o mesmo efeito).
-        items += f"""
-        <li>
-            <b>{row['title']}</b> - {row['description']}
-            {'(feita)' if row['done'] else ''}
-        </li>
-        """
-
-    return f"""
-    <h1>Minhas tarefas ({session['username']})</h1>
-    <form method="get">
-        <input type="text" name="q" placeholder="buscar tarefa">
-        <input type="submit" value="Buscar">
-    </form>
-    <ul>{items}</ul>
-    <a href="{url_for('new_task')}">Nova tarefa</a> |
-    <a href="{url_for('logout')}">Sair</a>
-    """
+    # CORRIGIDO (XSS armazenado): o HTML deixou de ser montado com f-string.
+    # Os templates Jinja2 (.html) tem autoescape ligado, entao um titulo ou
+    # descricao como "<script>...</script>" e renderizado como texto.
+    return render_template(
+        "tasks.html", tasks=rows, username=session["username"], search=search
+    )
 
 
 @app.route("/tasks/new", methods=["GET", "POST"])
@@ -213,14 +189,7 @@ def new_task():
         db.commit()
         return redirect(url_for("tasks"))
 
-    return """
-    <h1>Nova tarefa</h1>
-    <form method="post">
-        Titulo: <input type="text" name="title"><br>
-        Descricao: <textarea name="description"></textarea><br>
-        <input type="submit" value="Salvar">
-    </form>
-    """
+    return render_template("new_task.html")
 
 
 # Vulnerabilidade #5: endpoint de debug/diagnostico exposto sem

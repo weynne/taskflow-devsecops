@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>TaskFlow - Login</h1>
+<form method="post">
+  Usuario: <input type="text" name="username"><br>
+  Senha: <input type="password" name="password"><br>
+  <input type="submit" value="Entrar">
+</form>
+{% if error %}<p style="color:red">{{ error }}</p>{% endif %}
+{% endblock %}

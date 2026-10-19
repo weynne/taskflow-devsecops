@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Nova tarefa</h1>
+<form method="post">
+  Titulo: <input type="text" name="title"><br>
+  Descricao: <textarea name="description"></textarea><br>
+  <input type="submit" value="Salvar">
+</form>
+{% endblock %}

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Minhas tarefas ({{ username }})</h1>
+<form method="get">
+  <input type="text" name="q" placeholder="buscar tarefa" value="{{ search }}">
+  <input type="submit" value="Buscar">
+</form>
+<ul>
+  {% for task in tasks %}
+  <li><b>{{ task.title }}</b> - {{ task.description }}{% if task.done %} (feita){% endif %}</li>
+  {% endfor %}
+</ul>
+<a href="{{ url_for('new_task') }}">Nova tarefa</a> |
+<a href="{{ url_for('logout') }}">Sair</a>
+{% endblock %}
