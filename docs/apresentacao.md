@@ -64,8 +64,13 @@ use-o como referência e como plano B. Ao vivo, usa-se uma branch nova.
 
    Os checks ficam verdes, mas o merge **continua bloqueado** até um Code Owner aprovar
    (fase 2 da branch protection, ligada antes da entrega). Como o autor não pode aprovar o
-   próprio PR, combine antes com outro Code Owner (Jéssica ou Diego) para aprovar no momento
-   da demo: gate automático e revisão humana, os dois em sequência.
+   próprio PR, combine antes com a **Jéssica** para aprovar no momento da demo: gate
+   automático e revisão humana, os dois em sequência.
+
+   Só a Jéssica libera esse PR: no `CODEOWNERS` vale a **última regra** que casa com o arquivo,
+   e a regra do `app.py` tem como donos Jéssica e Weynne. A aprovação do Diego (regra geral `*`)
+   não vale para esse arquivo. Se ela não puder, a demo para no verde, mostrando o merge
+   bloqueado por "Code owner review required", e o PR é fechado sem merge.
 
    Antes da aula, confira em **Settings → Branches** que "Require approvals" e
    "Require review from Code Owners" estão marcados (ver [github-setup.md](github-setup.md#fase-2--entrega-depois-do-pr-5-antes-de-enviar-ao-professor)).
