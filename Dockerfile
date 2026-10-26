@@ -8,7 +8,7 @@
 # CORRIGIDO (FALHA 1): imagem minima (slim) com tag fixa E digest imutavel.
 # O digest garante que o build de hoje e o de amanha usam exatamente a mesma
 # imagem base; o Dependabot (ecossistema docker) propoe a atualizacao.
-FROM python:3.12-slim@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1 AS build
+FROM python:3.12-slim@sha256:a0f57064cbdcd6285fa45f51237ab0b35ea8ebaed06a1f5973e89e19dfb86704 AS build
 
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1
@@ -27,7 +27,7 @@ RUN python -m venv /opt/venv \
 # -----------------------------------------------------------------------------
 # Estagio 2: runtime - somente o necessario para executar a aplicacao
 # -----------------------------------------------------------------------------
-FROM python:3.12-slim@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1 AS runtime
+FROM python:3.12-slim@sha256:a0f57064cbdcd6285fa45f51237ab0b35ea8ebaed06a1f5973e89e19dfb86704 AS runtime
 
 ENV PATH="/opt/venv/bin:${PATH}" \
     PYTHONDONTWRITEBYTECODE=1 \
