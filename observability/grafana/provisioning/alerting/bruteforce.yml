@@ -1,0 +1,49 @@
+# Regra de alerta da condicao de disparo do runbook
+# (docs/runbook-login-bruteforce.md): mais de 10 falhas de login do mesmo IP
+# em 5 minutos. Avaliada a cada minuto; cada IP vira uma instancia do alerta.
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: taskflow-seguranca
+    folder: TaskFlow
+    interval: 1m
+    rules:
+      - uid: taskflow-login-bruteforce
+        title: "TaskFlow - forca bruta no login"
+        condition: C
+        for: 0s
+        noDataState: OK
+        execErrState: Error
+        labels:
+          severity: high
+          runbook: login-bruteforce
+        annotations:
+          summary: "{{ $labels.client_ip }} errou o login {{ $values.B }} vezes em 5 minutos"
+          runbook_url: docs/runbook-login-bruteforce.md
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: loki
+            model:
+              refId: A
+              queryType: instant
+              expr: 'sum by (client_ip) (count_over_time({service="web", event="login_failure"} | json [5m]))'
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: reduce
+              expression: A
+              reducer: last
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [10]
