@@ -48,7 +48,7 @@ services:
 
   promtail:
     <<: *hardening
-    image: grafana/promtail:3.5.5@sha256:784743d283f71f644e290d7b9fadf5e1edff405d2756974c6e13fa7978c08b64
+    image: grafana/promtail:3.6.8@sha256:6cfa64ec432b24a912d640e2edb940eeae2666f61861a66c121d763dd7241381
     command: ["-config.file=/etc/promtail/config.yml"]
     labels:
       seguranca.excecao.usuario-nao-root: >-
