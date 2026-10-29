@@ -1,0 +1,129 @@
+# Stack de observabilidade da TaskFlow (Modulo 6): Loki + Promtail + Grafana.
+#
+#   docker compose up -d                                       # app (docker-compose.yml)
+#   docker compose -f docker-compose.observability.yml up -d   # esta stack
+#   Grafana: http://127.0.0.1:3000 (usuario/senha do .env) -> dashboard "TaskFlow - Seguranca"
+#
+# Usa o mesmo .env da raiz (GRAFANA_ADMIN_*). Mesmas regras de hardening do
+# docker-compose.yml; as excecoes estao declaradas no label
+# "seguranca.excecao.*" do servico, com a justificativa, e sao conferidas
+# pelo scripts/check-compose.py no workflow iac-scan.yml.
+
+name: taskflow-observabilidade
+
+x-hardening: &hardening
+  cap_drop: [ALL]
+  security_opt:
+    - no-new-privileges:true
+  read_only: true
+  restart: unless-stopped
+  networks: [monitoring]
+
+services:
+  loki:
+    <<: *hardening
+    image: grafana/loki:3.5.5@sha256:31628519045e7f28692a7ae73b4a3fd293dccb425585ed5d16ceea3b5c9592e6
+    command: ["-config.file=/etc/loki/config.yml"]
+    user: "10001:10001"
+    # So no loopback: permite consultas LogQL por curl/logcli no plano B da demo.
+    ports:
+      - "127.0.0.1:3100:3100"
+    volumes:
+      - ./observability/loki/config.yml:/etc/loki/config.yml:ro
+      - loki-data:/loki
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3100/ready"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+          pids: 200
+
+  promtail:
+    <<: *hardening
+    image: grafana/promtail:3.5.5@sha256:784743d283f71f644e290d7b9fadf5e1edff405d2756974c6e13fa7978c08b64
+    command: ["-config.file=/etc/promtail/config.yml"]
+    labels:
+      seguranca.excecao.usuario-nao-root: >-
+        Os arquivos /var/lib/docker/containers/*/*-json.log pertencem ao root
+        (0640). O container roda como root, mas sem nenhuma capability
+        (cap_drop ALL), com no-new-privileges, rootfs read-only e o diretorio
+        de logs montado somente leitura. Alternativa avaliada e descartada:
+        montar o docker.sock, que daria controle total do host.
+    user: "0:0"
+    volumes:
+      - ./observability/promtail/config.yml:/etc/promtail/config.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - promtail-positions:/var/lib/promtail
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/9080 && printf 'GET /ready HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q '200 OK' <&3"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    depends_on:
+      loki:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+          pids: 100
+
+  grafana:
+    <<: *hardening
+    image: grafana/grafana:12.2.0@sha256:74144189b38447facf737dfd0f3906e42e0776212bf575dc3334c3609183adf7
+    user: "472:0"
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?defina no .env}
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SECURITY_DISABLE_GRAVATAR: "true"
+      GF_SECURITY_COOKIE_SAMESITE: strict
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: "false"
+      GF_PLUGINS_PREINSTALL_DISABLED: "true"
+      GF_NEWS_NEWS_FEED_ENABLED: "false"
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/api/health"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      loki:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+          pids: 200
+
+networks:
+  monitoring:
+
+volumes:
+  loki-data:
+  promtail-positions:
+  grafana-data:

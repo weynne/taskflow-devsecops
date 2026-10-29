@@ -1,0 +1,124 @@
+# TaskFlow + banco, orquestrados com seguranca (Modulo 5 - Docker Compose).
+#
+#   cp .env.example .env    # preencha com valores proprios (.env NAO e versionado)
+#   docker compose up --build -d
+#   docker compose ps       # web e db devem ficar "healthy"
+#
+# Sobre o banco "simulado": a TaskFlow continua usando SQLite (volume
+# taskflow-data). O servico db (PostgreSQL) existe, como no laboratorio da
+# disciplina, para exercitar o isolamento de rede entre aplicacao e banco
+# sem migrar a camada de persistencia.
+#
+# Cada bloco "CORRIGIDO" referencia a falha que a versao insegura do
+# laboratorio (docker-compose.insecure.yml) tinha. Ver docs/iac.md.
+
+name: taskflow
+
+x-hardening: &hardening
+  # CORRIGIDO (sem limites de privilegio): nenhuma capability Linux e
+  # bloqueio de escalonamento via binarios setuid.
+  cap_drop: [ALL]
+  security_opt:
+    - no-new-privileges:true
+  # CORRIGIDO (filesystem gravavel): raiz somente leitura; so os volumes e
+  # tmpfs declarados abaixo aceitam escrita.
+  read_only: true
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      # "tag" e "labels" viram o campo attrs de cada linha de log: e assim
+      # que o Promtail identifica projeto/servico sem precisar do docker.sock.
+      tag: "{{.Name}}"
+      labels: "com.docker.compose.project,com.docker.compose.service"
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  web:
+    <<: *hardening
+    build: .
+    image: taskflow:local
+    # CORRIGIDO (porta exposta em todas as interfaces): publica so no
+    # loopback do host. Em producao, um proxy reverso com TLS fica na frente.
+    ports:
+      - "127.0.0.1:5000:5000"
+    # CORRIGIDO (segredo hardcoded no YAML): valores vem do .env (fora do Git).
+    # O ":?" faz o compose falhar se a variavel estiver vazia, em vez de subir
+    # a aplicacao com um segredo em branco.
+    environment:
+      TASKFLOW_SECRET_KEY: ${TASKFLOW_SECRET_KEY:?defina no .env}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?defina no .env}
+      ALUNO_PASSWORD: ${ALUNO_PASSWORD:-}
+    user: "10001:10001"
+    volumes:
+      - taskflow-data:/app/data
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    # CORRIGIDO (sem healthcheck): o compose so considera o servico pronto
+    # quando /login responde; o "depends_on" abaixo usa o mesmo mecanismo.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/login', timeout=2)"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      db:
+        condition: service_healthy
+    # CORRIGIDO (sem limite de recursos): um container comprometido ou em
+    # loop nao esgota CPU/memoria/processos do host.
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+          pids: 100
+    # CORRIGIDO (rede unica): web fala com o mundo pela frontend e com o
+    # banco pela backend.
+    networks:
+      - frontend
+      - backend
+
+  db:
+    <<: *hardening
+    image: postgres:17-alpine@sha256:266d3c257594e195b309ae9d1805e54c788f1d7b375f56bf6c367aac6c917e7b
+    # CORRIGIDO (porta do banco publicada no host): sem "ports:". O Postgres
+    # so e alcancavel por quem esta na rede backend.
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?defina no .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina no .env}
+      POSTGRES_DB: ${POSTGRES_DB:-taskflow}
+    # Roda direto como o usuario postgres da imagem alpine (UID 70): com
+    # cap_drop ALL o entrypoint nao conseguiria trocar de usuario (gosu/su-exec).
+    user: "70:70"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    tmpfs:
+      - /var/run/postgresql:rw,noexec,nosuid,size=1m,uid=70,gid=70
+      - /tmp:rw,noexec,nosuid,size=16m,uid=70,gid=70
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+          pids: 100
+    networks:
+      - backend
+
+networks:
+  frontend:
+  backend:
+    # Rede interna: sem rota para fora do host. O banco nao acessa a internet
+    # e nada de fora entra nela.
+    internal: true
+
+volumes:
+  taskflow-data:
+  db-data:

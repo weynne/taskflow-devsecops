@@ -1,0 +1,40 @@
+# Simulacao de forca bruta + deteccao no Loki/Grafana - 2026-10-27 21:18
+
+$ python3 scripts/simular-forca-bruta.py --tentativas 25            # contra admin
+$ BRUTEFORCE_SENHA_REAL=*** python3 scripts/simular-forca-bruta.py --usuario aluno --tentativas 15 --sucesso-no-fim
+-> 40 falhas + 1 sucesso a partir de 172.20.0.1 (gateway da rede frontend = IP do atacante visto pela app)
+
+## Query de deteccao do runbook (Q1)
+sum by (client_ip) (count_over_time({service="web", event="login_failure"} | json [5m]))
+{"metric":{"client_ip":"172.20.0.1"},"valor":"40"}
+
+## Contas alvo (Q2)
+{"metric":{"client_ip":"172.20.0.1","reason":"bad_password","user":"admin"},"valor":"25"}
+{"metric":{"client_ip":"172.20.0.1","reason":"bad_password","user":"aluno"},"valor":"15"}
+
+## Sucesso vindo de IP com falhas (Q3)
+{"metric":{"client_ip":"172.20.0.1","user":"aluno"},"valor":"1"}
+
+## Exemplo de linha de log (login_failure)
+{"timestamp": "2026-10-28T00:16:18.525+00:00", "level": "WARNING", "logger": "taskflow", "event": "login_failure", "request_id": "258dc6ed70b545ed9b9c5c8776388036", "user": "aluno", "reason": "bad_password", "client_ip": "172.20.0.1"}
+
+
+## Nenhuma senha tentada nos logs (busca por senha123 e pela senha real): resultados =
+(vazio)
+
+## Estado do alerta provisionado no Grafana
+{"state":"Alerting","client_ip":"172.20.0.1","resumo":"172.20.0.1 errou o login 40 vezes em 5 minutos","desde":"2026-10-28T00:17:10Z"}
+
+## Contencao exercitada (runbook, fase 3) - 2026-10-27 21:25
+1) Troca da senha da conta comprometida:
+sessao do atacante antes: 200 (200 = logado)
+senha do aluno trocada (nova senha temporaria entregue por canal seguro)
+sessao do atacante apos trocar senha: 200 (sessao ainda vale!)
+   -> trocar a senha NAO derruba a sessao ja aberta (cookie assinado, sem estado no servidor)
+2) Rotacao da TASKFLOW_SECRET_KEY + 'docker compose up -d web':
+login admin (sessao a ser invalidada): 302 (302 = ok)
+sessao antes: 200
+ Container taskflow-web-1 Recreated 
+ Container taskflow-web-1 Started 
+sessao apos rotacionar: 302 (302 = expulso para /login)
+login do aluno com a senha antiga: 200 (200 = recusado)

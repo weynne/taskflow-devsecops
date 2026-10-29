@@ -1,0 +1,56 @@
+# Saida resumida de scripts/dast-scan.sh (ZAP 2.17.0) - gerada em 2026-10-27
+==> 1/4 Aguardando http://127.0.0.1:5000/login (ate 60s)
+==> 2/4 Abrindo sessao autenticada como 'aluno'
+==> 3/4 ZAP Baseline (gate: .zap/rules.tsv)
+Total of 8 URLs
+IGNORE: Non-Storable Content [10049] x 8 
+	http://127.0.0.1:5000 (302 Found)
+	http://127.0.0.1:5000/logout (302 Found)
+	http://127.0.0.1:5000/tasks/new (302 Found)
+	http://127.0.0.1:5000 (200 OK)
+	http://127.0.0.1:5000/robots.txt (404 Not Found)
+IGNORE: Authentication Request Identified [10111] x 1 
+	http://127.0.0.1:5000/login (200 OK)
+FAIL-NEW: Missing Anti-clickjacking Header [10020] x 5 
+	http://127.0.0.1:5000 (200 OK)
+	http://127.0.0.1:5000/login (200 OK)
+	http://127.0.0.1:5000/tasks (200 OK)
+	http://127.0.0.1:5000/tasks?q=ZAP (200 OK)
+	http://127.0.0.1:5000/tasks/new (200 OK)
+FAIL-NEW: X-Content-Type-Options Header Missing [10021] x 5 
+	http://127.0.0.1:5000 (200 OK)
+	http://127.0.0.1:5000/login (200 OK)
+	http://127.0.0.1:5000/tasks (200 OK)
+	http://127.0.0.1:5000/tasks/new (200 OK)
+	http://127.0.0.1:5000/login (200 OK)
+FAIL-NEW: Server Leaks Version Information via "Server" HTTP Response Header Field [10036] x 5 
+	http://127.0.0.1:5000 (302 Found)
+	http://127.0.0.1:5000/tasks (200 OK)
+	http://127.0.0.1:5000/tasks?q=ZAP (200 OK)
+	http://127.0.0.1:5000/tasks/new (200 OK)
+	http://127.0.0.1:5000/tasks/new (302 Found)
+FAIL-NEW: Content Security Policy (CSP) Header Not Set [10038] x 5 
+	http://127.0.0.1:5000/login (200 OK)
+	http://127.0.0.1:5000/robots.txt (404 Not Found)
+	http://127.0.0.1:5000/sitemap.xml (404 Not Found)
+	http://127.0.0.1:5000/tasks (200 OK)
+	http://127.0.0.1:5000/tasks/new (200 OK)
+FAIL-NEW: Permissions Policy Header Not Set [10063] x 5 
+	http://127.0.0.1:5000 (200 OK)
+	http://127.0.0.1:5000/robots.txt (404 Not Found)
+	http://127.0.0.1:5000/sitemap.xml (404 Not Found)
+	http://127.0.0.1:5000/tasks/new (200 OK)
+	http://127.0.0.1:5000/login (200 OK)
+FAIL-NEW: Cross-Origin-Embedder-Policy Header Missing or Invalid [90004] x 15 
+	http://127.0.0.1:5000 (200 OK)
+	http://127.0.0.1:5000/login (200 OK)
+	http://127.0.0.1:5000/tasks (200 OK)
+	http://127.0.0.1:5000/tasks/new (200 OK)
+	http://127.0.0.1:5000/login (200 OK)
+FAIL-NEW: 6	FAIL-INPROG: 0	WARN-NEW: 0	WARN-INPROG: 0	INFO: 0	IGNORE: 2	PASS: 60
+::error::ZAP Baseline reprovou (exit 1). Veja zap-baseline.html.
+# Varredura ativa de XSS contra a linha de base vulneravel (alertas >= Medium)
+40014 Cross Site Scripting (Persistent) [High (Medium)] http://127.0.0.1:5000/tasks param=description
+40012 Cross Site Scripting (Reflected) [High (Medium)] http://127.0.0.1:5000/tasks/new param=description
+10038 Content Security Policy (CSP) Header Not Set [Medium (High)] http://127.0.0.1:5000 param=
+10020 Missing Anti-clickjacking Header [Medium (Medium)] http://127.0.0.1:5000 param=x-frame-options

@@ -1,0 +1,16 @@
+# trivy 0.76.1 config . (linha de base insegura) - 2026-10-27
+main.insecure.tf (terraform)
+Failures: 13 (UNKNOWN: 0, LOW: 4, MEDIUM: 1, HIGH: 7, CRITICAL: 1)
+AWS-0086 (HIGH): Public access block does not block public ACLs
+AWS-0087 (HIGH): Public access block does not block public policies
+AWS-0089 (LOW): Bucket has logging disabled
+AWS-0090 (MEDIUM): Bucket does not have versioning enabled
+AWS-0091 (HIGH): Public access block does not ignore public ACLs
+AWS-0092 (HIGH): Bucket has a public ACL: "public-read"
+AWS-0093 (HIGH): Public access block does not restrict public buckets
+AWS-0104 (CRITICAL): Security group rule allows unrestricted egress to any IP address.
+AWS-0107 (HIGH): Security group rule allows unrestricted ingress from any IP address.
+AWS-0124 (LOW): Security group rule does not have a description.
+AWS-0124 (LOW): Security group rule does not have a description.
+AWS-0124 (LOW): Security group rule does not have a description.
+AWS-0132 (HIGH): Bucket does not encrypt data with a customer managed key.

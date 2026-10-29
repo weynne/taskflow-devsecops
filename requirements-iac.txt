@@ -1,0 +1,4 @@
+# Scanner de IaC usado pelo workflow iac-scan.yml (nao vai para a imagem).
+# Versao fixa para o resultado do gate ser reprodutivel; o Dependabot (pip)
+# propoe a atualizacao.
+checkov==3.2.529
