@@ -7,9 +7,13 @@ desta página).
 | Check | Ferramenta | Escopo | Bloqueia quando |
 | --- | --- | --- | --- |
 | `IaC - Terraform validate` | `terraform fmt -check` + `validate` (imagem fixada por digest, `-backend=false`, lock file somente leitura) | `infra/` | código mal formatado ou inválido |
-| `IaC - Checkov` | Checkov 3.2.529 (`requirements-iac.txt`) | Terraform, Dockerfile, workflows do GitHub Actions | qualquer FAILED; ou `#checkov:skip`/`#trivy:ignore` **sem justificativa** |
+| `IaC - Checkov` | Checkov 3.3.30 (`requirements-iac.txt`) | Terraform, Dockerfile, workflows do GitHub Actions | qualquer FAILED; ou `#checkov:skip`/`#trivy:ignore` **sem justificativa** |
 | `IaC - Trivy config` | Trivy 0.76.0 (digest) | repositório inteiro | qualquer misconfiguration, **em qualquer severidade** |
 | `IaC - Politica do Compose` | [`scripts/check-compose.py`](../scripts/check-compose.py) | `docker-compose.yml` e `docker-compose.observability.yml` | qualquer regra da política violada sem exceção justificada |
+
+Prova do gate no GitHub, negativo → positivo: [PR #21](https://github.com/weynne/taskflow-devsecops/pull/21). O bucket público
+e o banco exposto deixaram 3 gates vermelhos; o revert voltou tudo ao verde. Detalhes em
+[`evidencias/demos-negativo-positivo.md`](evidencias/demos-negativo-positivo.md).
 
 ## Docker Compose
 
