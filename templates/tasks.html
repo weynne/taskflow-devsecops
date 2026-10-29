@@ -8,7 +8,7 @@
 </form>
 <ul>
   {% for task in tasks %}
-  <li><b>{{ task.title }}</b> - {{ task.description }}{% if task.done %} (feita){% endif %}</li>
+  <li><b>{{ task.title }}</b> - {{ task.description | safe }}{% if task.done %} (feita){% endif %}</li>
   {% endfor %}
 </ul>
 <a href="{{ url_for('new_task') }}">Nova tarefa</a> |
