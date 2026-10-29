@@ -1,4 +1,5 @@
 import os
+import re
 import tempfile
 
 import pytest
@@ -25,6 +26,21 @@ def app():
     yield flask_app
 
 
+_CSRF_INPUT = re.compile(rb'name="csrf_token" value="([^"]+)"')
+
+
+def csrf_from(client, path):
+    """Le o token anti-CSRF do formulario, como faria um navegador."""
+    match = _CSRF_INPUT.search(client.get(path).data)
+    assert match, f"formulario em {path} sem csrf_token"
+    return match.group(1).decode()
+
+
+def post_form(client, path, data):
+    """POST com o token CSRF obtido do proprio formulario."""
+    return client.post(path, data={**data, "csrf_token": csrf_from(client, path)})
+
+
 @pytest.fixture()
 def client(app):
     return app.test_client()
@@ -37,5 +53,5 @@ def admin_password():
 
 @pytest.fixture()
 def logged_client(client, admin_password):
-    client.post("/login", data={"username": "admin", "password": admin_password})
+    post_form(client, "/login", {"username": "admin", "password": admin_password})
     return client

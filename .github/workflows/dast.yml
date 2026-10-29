@@ -1,0 +1,100 @@
+# DAST - a TaskFlow sobe DENTRO do runner e e atacada pelo OWASP ZAP.
+#  1. Build da imagem endurecida (mesmo Dockerfile de producao)
+#  2. Container sobe com as flags de runtime seguras e segredos efemeros
+#  3. scripts/dast-scan.sh: espera ativa pelo /login -> login real ->
+#     ZAP Baseline (gate .zap/rules.tsv) -> varredura ativa de XSS (gate)
+#  4. Relatorios HTML/MD/JSON publicados como artefato, mesmo se o gate falhar
+#
+# Sem filtro "paths:": este check e obrigatorio na branch protection, entao
+# precisa rodar em todo PR (um check required que nao roda trava o merge).
+# Sem continue-on-error: o exit code do script E o gate.
+name: DAST
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 11 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dast-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IMAGE: taskflow:dast-${{ github.sha }}
+  # Imagem do ZAP fixada por digest (2.17.0): a lista de regras do
+  # .zap/rules.tsv foi gerada nesta versao. O Dependabot nao acompanha
+  # imagens usadas via "docker run"; atualizar manualmente e regerar a lista.
+  ZAP_IMAGE: "zaproxy/zap-stable@sha256:030d3df57735dacbb83464854758e674dd9ad01d79d12a129a8e58b1fd384238"
+  TARGET: http://127.0.0.1:5000
+  REPORT_DIR: reports/zap
+
+jobs:
+  zap:
+    name: DAST - ZAP Baseline + XSS
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout do codigo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build da imagem
+        run: docker build --pull -t "$IMAGE" .
+
+      - name: Pre-carregar a imagem do ZAP
+        run: docker pull --quiet "$ZAP_IMAGE"
+
+      - name: Subir a TaskFlow no runner (runtime seguro, segredos efemeros)
+        run: |
+          # Segredos gerados so para este run; nunca saem do runner.
+          env_file="$RUNNER_TEMP/taskflow.env"
+          umask 077
+          {
+            echo "TASKFLOW_SECRET_KEY=$(openssl rand -hex 32)"
+            echo "ADMIN_PASSWORD=$(openssl rand -hex 16)"
+            echo "ALUNO_PASSWORD=$(openssl rand -hex 16)"
+          } > "$env_file"
+          while IFS='=' read -r _ value; do echo "::add-mask::$value"; done < "$env_file"
+
+          IMAGE="$IMAGE" CONTAINER_NAME=taskflow-dast ENV_FILE="$env_file" \
+            ./scripts/docker-run-seguro.sh
+
+      - name: ZAP Baseline + varredura de XSS (gate)
+        run: |
+          DAST_PASSWORD="$(sed -n 's/^ALUNO_PASSWORD=//p' "$RUNNER_TEMP/taskflow.env")"
+          export DAST_PASSWORD
+          ./scripts/dast-scan.sh
+
+      - name: Publicar relatorios do ZAP
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: zap-reports
+          path: |
+            ${{ env.REPORT_DIR }}/*.html
+            ${{ env.REPORT_DIR }}/*.md
+            ${{ env.REPORT_DIR }}/*.json
+            ${{ env.REPORT_DIR }}/*.log
+          retention-days: 14
+
+      - name: Resumo no job
+        if: always()
+        run: |
+          if [[ -f "$REPORT_DIR/zap-baseline.md" ]]; then
+            cat "$REPORT_DIR/zap-baseline.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Logs da aplicacao e encerramento
+        if: always()
+        run: |
+          docker logs taskflow-dast 2>&1 | tail -n 50 || true
+          docker stop taskflow-dast || true
+          rm -f "$RUNNER_TEMP/taskflow.env"

@@ -1,0 +1,65 @@
+# Plano do ZAP Automation Framework: varredura ATIVA restrita as regras de XSS.
+#
+# Por que existe, alem do Baseline: o Baseline e passivo (so observa as
+# respostas) e nao tem nenhuma regra capaz de provar um XSS. Para que o
+# pipeline bloqueie um PR que reabra o XSS armazenado, este plano injeta
+# payloads apenas com as quatro regras de XSS do ZAP, autenticado, contra a
+# instancia efemera que o proprio job subiu (nunca contra um ambiente real).
+#
+# ${TARGET} vem do ambiente. O cookie da sessao autenticada e injetado pelo
+# scripts/dast-scan.sh com a regra do Replacer na linha de comando do ZAP.
+env:
+  contexts:
+    - name: taskflow
+      urls:
+        - ${TARGET}
+      includePaths:
+        - ${TARGET}.*
+      excludePaths:
+        - ${TARGET}/logout.*
+  parameters:
+    failOnError: true
+    progressToStdout: true
+
+jobs:
+  - type: spider
+    parameters:
+      context: taskflow
+      maxDuration: 2
+
+  - type: passiveScan-wait
+    parameters:
+      maxDuration: 2
+
+  - type: activeScan
+    parameters:
+      context: taskflow
+      maxScanDurationInMins: 10
+    policyDefinition:
+      defaultStrength: medium
+      defaultThreshold: "off"
+      rules:
+        - id: 40012   # Cross Site Scripting (Reflected)
+          strength: medium
+          threshold: low
+        - id: 40014   # Cross Site Scripting (Persistent)
+          strength: medium
+          threshold: low
+        - id: 40016   # Cross Site Scripting (Persistent) - Prime
+          strength: medium
+          threshold: low
+        - id: 40017   # Cross Site Scripting (Persistent) - Spider
+          strength: medium
+          threshold: low
+
+  - type: report
+    parameters:
+      template: traditional-json
+      reportDir: /zap/wrk
+      reportFile: zap-xss.json
+
+  - type: report
+    parameters:
+      template: traditional-html
+      reportDir: /zap/wrk
+      reportFile: zap-xss.html

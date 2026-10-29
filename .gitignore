@@ -18,3 +18,11 @@ data/
 # Relatorios gerados localmente pelos scanners
 *.sarif
 reports/
+
+# Terraform: estado, cache de providers e variaveis locais (podem ter segredos)
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log

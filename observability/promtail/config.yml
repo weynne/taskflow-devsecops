@@ -1,0 +1,62 @@
+# Promtail: le os arquivos de log do Docker (driver json-file) em modo
+# somente leitura e envia ao Loki. NAO usa o docker.sock (que daria controle
+# total do host a quem comprometesse este container): os metadados do servico
+# vem do campo "attrs", gravado pelo driver de log por causa das opcoes
+# "labels"/"tag" declaradas no docker-compose.yml.
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+  log_level: warn
+
+positions:
+  filename: /var/lib/promtail/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: docker
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: docker
+          __path__: /var/lib/docker/containers/*/*-json.log
+    pipeline_stages:
+      # Envelope do json-file: {"log": "...", "stream": "stdout", "attrs": {...}, "time": "..."}
+      - json:
+          expressions:
+            output: log
+            stream: stream
+            time: time
+            container: attrs.tag
+            project: 'attrs."com.docker.compose.project"'
+            service: 'attrs."com.docker.compose.service"'
+      - labels:
+          project:
+          service:
+          container:
+          stream:
+      # Coleta apenas os containers do projeto TaskFlow; o resto do host
+      # (outros projetos, dados de terceiros) nunca chega ao Loki.
+      - match:
+          selector: '{project!="taskflow"}'
+          action: drop
+          drop_counter_reason: fora_do_projeto
+      - timestamp:
+          source: time
+          format: RFC3339Nano
+      - output:
+          source: output
+      # Linhas da aplicacao sao JSON: "event" e "level" viram labels (poucos
+      # valores possiveis). Campos de alta cardinalidade (client_ip, user,
+      # request_id) ficam no corpo e sao extraidos na consulta com "| json".
+      - match:
+          selector: '{service="web"}'
+          stages:
+            - json:
+                expressions:
+                  level: level
+                  event: event
+            - labels:
+                level:
+                event:

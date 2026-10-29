@@ -1,0 +1,25 @@
+# checkov 3.2.529 -d . (infra/ corrigido + Dockerfile + workflows) - 2026-10-27
+terraform scan results:
+Passed checks: 42, Failed checks: 0, Skipped checks: 7
+dockerfile scan results:
+Passed checks: 53, Failed checks: 0, Skipped checks: 0
+github_actions scan results:
+Passed checks: 204, Failed checks: 0, Skipped checks: 0
+
+# Skips justificados no infra/main.tf:
+infra/main.tf:62  #checkov:skip=CKV_AWS_144:Replicacao entre regioes fora do escopo do laboratorio (custo e segunda regiao); a recuperacao vem do versionamento + KMS.
+infra/main.tf:63  #checkov:skip=CKV2_AWS_62:Nao ha consumidor de eventos do bucket (fila/lambda); notificacao sem destino nao agrega controle.
+infra/main.tf:148  #trivy:ignore:AWS-0089 Este E o bucket de destino dos logs de acesso; logar o bucket de logs nele mesmo cria um laco de escrita.
+infra/main.tf:150  #checkov:skip=CKV_AWS_18:Este E o bucket de destino dos logs de acesso; logar o bucket de logs nele mesmo cria um laco de escrita.
+infra/main.tf:151  #checkov:skip=CKV_AWS_144:Replicacao entre regioes fora do escopo do laboratorio (custo e segunda regiao).
+infra/main.tf:152  #checkov:skip=CKV2_AWS_62:Bucket de logs nao tem consumidor de eventos.
+infra/main.tf:153  #checkov:skip=CKV_AWS_145:A entrega de server access logs do S3 so suporta SSE-S3 (AES256) no bucket de destino, nao SSE-KMS (documentacao AWS).
+infra/main.tf:172  #trivy:ignore:AWS-0132 A entrega de server access logs do S3 so suporta SSE-S3 (AES256) no bucket de destino, nao SSE-KMS.
+infra/main.tf:246  #checkov:skip=CKV2_AWS_5:O SG e anexado ao balanceador/instancia no modulo de compute, fora do escopo deste laboratorio (so S3 + rede).
+
+# trivy config --exit-code 1 infra/
+nenhuma falha (exit 0)
+
+# terraform validate
+Success! The configuration is valid.
+
