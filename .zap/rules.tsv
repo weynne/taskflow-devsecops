@@ -1,0 +1,79 @@
+# Regras do ZAP Baseline da TaskFlow (zap-baseline.py -c rules.tsv).
+# Formato: <id>\t<ACAO>\t<(nome) justificativa>. Arquivo separado por TAB.
+#
+# Politica do grupo: TODA regra passiva comeca em FAIL (bloqueia o merge).
+# Rebaixar para WARN (aparece no relatorio, nao bloqueia) ou IGNORE (some do
+# relatorio) exige justificativa na propria linha e revisao em PR por um
+# CODEOWNER. Nao rebaixar tudo para IGNORE: o criterio mede o bloqueio.
+# Lista gerada com 'zap-baseline.py -g' na imagem fixada no dast.yml; regras
+# novas de versoes futuras do ZAP entram como WARN ate serem classificadas.
+#
+# Rebaixadas hoje: 10031 (WARN), 10049, 10111, 10112 (IGNORE). Todas sao
+# informativas; detalhes em docs/dast.md.
+10003	FAIL	(Vulnerable JS Library (Powered by Retire.js))
+10009	FAIL	(In Page Banner Information Leak)
+10010	FAIL	(Cookie No HttpOnly Flag)
+10011	FAIL	(Cookie Without Secure Flag)
+10015	FAIL	(Re-examine Cache-control Directives)
+10017	FAIL	(Cross-Domain JavaScript Source File Inclusion)
+10019	FAIL	(Content-Type Header Missing)
+10020	FAIL	(Anti-clickjacking Header)
+10021	FAIL	(X-Content-Type-Options Header Missing)
+10023	FAIL	(Information Disclosure - Debug Error Messages)
+10024	FAIL	(Information Disclosure - Sensitive Information in URL)
+10025	FAIL	(Information Disclosure - Sensitive Information in HTTP Referrer Header)
+10026	FAIL	(HTTP Parameter Override)
+10027	FAIL	(Information Disclosure - Suspicious Comments)
+10028	FAIL	(Off-site Redirect)
+10029	FAIL	(Cookie Poisoning)
+10030	FAIL	(User Controllable Charset)
+10031	WARN	(User Controllable HTML Element Attribute (Potential XSS)) Informativo e 'potencial': o ZAP so ve o valor de q refletido no atributo value. O autoescape do Jinja2 o escapa, comprovado pela varredura ativa de XSS (etapa 4 do dast-scan.sh) e por test_xss_refletido_no_parametro_q_e_escapado. Fica em WARN para continuar visivel no relatorio.
+10032	FAIL	(Viewstate)
+10033	FAIL	(Directory Browsing)
+10034	FAIL	(Heartbleed OpenSSL Vulnerability (Indicative))
+10035	FAIL	(Strict-Transport-Security Header)
+10036	FAIL	(HTTP Server Response Header)
+10037	FAIL	(Server Leaks Information via "X-Powered-By" HTTP Response Header Field(s))
+10038	FAIL	(Content Security Policy (CSP) Header Not Set)
+10039	FAIL	(X-Backend-Server Header Information Leak)
+10040	FAIL	(Secure Pages Include Mixed Content)
+10041	FAIL	(HTTP to HTTPS Insecure Transition in Form Post)
+10042	FAIL	(HTTPS to HTTP Insecure Transition in Form Post)
+10043	FAIL	(User Controllable JavaScript Event (XSS))
+10044	FAIL	(Big Redirect Detected (Potential Sensitive Information Leak))
+10049	IGNORE	(Content Cacheability) Informativo: o ZAP apenas registra que as respostas nao sao armazenaveis em cache. E o comportamento desejado: a aplicacao envia Cache-Control: no-store de proposito (dados do usuario).
+10050	FAIL	(Retrieved from Cache)
+10052	FAIL	(X-ChromeLogger-Data (XCOLD) Header Information Leak)
+10054	FAIL	(Cookie without SameSite Attribute)
+10055	FAIL	(CSP)
+10056	FAIL	(X-Debug-Token Information Leak)
+10057	FAIL	(Username Hash Found)
+10061	FAIL	(X-AspNet-Version Response Header)
+10062	FAIL	(PII Disclosure)
+10063	FAIL	(Permissions Policy Header Not Set)
+10096	FAIL	(Timestamp Disclosure)
+10097	FAIL	(Hash Disclosure)
+10098	FAIL	(Cross-Domain Misconfiguration)
+10099	FAIL	(Source Code Disclosure)
+10105	FAIL	(Weak Authentication Method)
+10108	FAIL	(Reverse Tabnabbing)
+10109	FAIL	(Modern Web Application)
+10110	FAIL	(Dangerous JS Functions)
+10111	IGNORE	(Authentication Request Identified) Informativo: o ZAP so identifica que /login e um formulario de autenticacao (insumo para configurar scans autenticados). Nao e vulnerabilidade.
+10112	IGNORE	(Session Management Response Identified) Informativo: o ZAP so identifica o cookie de sessao do Flask (insumo para gerenciamento de sessao). As flags do cookie sao cobertas pelas regras 10010, 10054 e 90033, que seguem em FAIL.
+10113	FAIL	(Verification Request Identified)
+10115	FAIL	(Script Served From Malicious Domain (polyfill))
+10116	FAIL	(ZAP is Out of Date)
+10202	FAIL	(Absence of Anti-CSRF Tokens)
+2	FAIL	(Private IP Disclosure)
+20020	FAIL	(Server Side Technology Version with Known Vulnerabilities)
+3	FAIL	(Session ID in URL Rewrite)
+50001	FAIL	(Script Passive Scan Rules)
+90001	FAIL	(Insecure JSF ViewState)
+90002	FAIL	(Java Serialization Object)
+90003	FAIL	(Sub Resource Integrity Attribute Missing)
+90004	FAIL	(Insufficient Site Isolation Against Spectre Vulnerability)
+90011	FAIL	(Charset Mismatch)
+90022	FAIL	(Application Error Disclosure)
+90030	FAIL	(WSDL File Detection)
+90033	FAIL	(Loosely Scoped Cookie)
