@@ -1,0 +1,114 @@
+# IaC scan - Terraform (infra/), Dockerfile, workflows e Docker Compose.
+#  1. terraform fmt + validate (sem credenciais, sem backend)
+#  2. Checkov (gate): terraform, dockerfile e github_actions
+#  3. Trivy config (gate): misconfiguration em todo o repositorio
+#  4. Politica do Compose (gate): scripts/check-compose.py, porque nem o
+#     Checkov nem o Trivy analisam docker-compose.yml
+#
+# Desenho do gatilho: SEM filtro "paths:". Estes jobs sao required checks na
+# branch protection; com "paths: ['**/*.tf']" um PR que nao toca em IaC
+# ficaria travado esperando um check que nunca roda. Rodar sempre custa
+# ~1 min e ainda pega regressao em Dockerfile/Compose/workflows.
+# Sem continue-on-error e sem soft-fail: o exit code de cada scanner e o gate.
+name: IaC
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 12 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: iac-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TERRAFORM_IMAGE: "hashicorp/terraform:1.16.0@sha256:64360659224d6cbeb099eeed61aa66a80e02c18ba08c0243bd905165b47b088e"
+  TRIVY_IMAGE: "aquasec/trivy:0.76.0@sha256:2416d1f74045b57274df1a340eee6b510cacd73c66a6ccb8da092b117eb7d222"
+
+jobs:
+  terraform:
+    name: IaC - Terraform validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do codigo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: terraform fmt, init e validate
+        run: |
+          tf() { docker run --rm -u "$(id -u):$(id -g)" -e HOME=/tmp \
+                   -v "$PWD/infra:/infra" -w /infra "$TERRAFORM_IMAGE" "$@"; }
+          tf fmt -check -recursive -diff
+          # -backend=false: nenhum state remoto nem credencial; o lock file
+          # versionado garante o mesmo provider (com hash) em todo run.
+          tf init -backend=false -input=false -lockfile=readonly
+          tf validate
+
+  checkov:
+    name: IaC - Checkov
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do codigo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Python e Checkov
+        uses: ./.github/actions/setup-python-deps
+        with:
+          requirements: requirements-iac.txt
+
+      - name: Todo skip/ignore tem justificativa
+        run: |
+          # "#checkov:skip=ID:texto" e "#trivy:ignore:ID texto" exigem texto
+          # explicando o motivo. Skip sem justificativa reprova o PR.
+          sem_motivo=$(grep -rnE '#\s*checkov:skip=[A-Z0-9_]+\s*(:\s*.{0,19})?$|#\s*trivy:ignore:[A-Z0-9-]+\s*$' \
+                         --include='*.tf' --include='Dockerfile' --include='*.yml' . || true)
+          if [[ -n "$sem_motivo" ]]; then
+            echo "::error::Skip/ignore sem justificativa:"
+            echo "$sem_motivo"
+            exit 1
+          fi
+          echo "Skips em vigor:"
+          grep -rnE '#\s*(checkov:skip|trivy:ignore)' --include='*.tf' --include='Dockerfile' . || true
+
+      - name: Checkov (gate)
+        run: |
+          checkov --directory . \
+            --framework terraform dockerfile github_actions \
+            --skip-path infra/.terraform \
+            --compact --quiet
+
+  trivy-config:
+    name: IaC - Trivy config
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do codigo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Trivy config (gate, todas as severidades)
+        run: |
+          docker run --rm -v "$PWD:/src:ro" "$TRIVY_IMAGE" config \
+            --exit-code 1 --skip-dirs /src/infra/.terraform /src
+
+  compose:
+    name: IaC - Politica do Compose
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do codigo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Politica de seguranca dos arquivos Compose (gate)
+        run: python3 scripts/check-compose.py docker-compose.yml docker-compose.observability.yml
