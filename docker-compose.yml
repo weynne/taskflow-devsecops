@@ -83,8 +83,8 @@ services:
   db:
     <<: *hardening
     image: postgres:17-alpine@sha256:266d3c257594e195b309ae9d1805e54c788f1d7b375f56bf6c367aac6c917e7b
-    # CORRIGIDO (porta do banco publicada no host): sem "ports:". O Postgres
-    # so e alcancavel por quem esta na rede backend.
+    ports:
+      - "5432:5432"
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?defina no .env}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina no .env}
