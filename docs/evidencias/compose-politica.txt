@@ -1,0 +1,92 @@
+# scripts/check-compose.py - versao insegura do laboratorio (antes) - 2026-10-27
+== docker-compose.insecure.yml
+  FAIL     db         read-only            esperado: read_only: true
+  FAIL     db         cap-drop             esperado: cap_drop: [ALL]
+  FAIL     db         no-new-privileges    esperado: security_opt: [no-new-privileges:true]
+  FAIL     db         healthcheck          esperado: healthcheck definido
+  FAIL     db         limites              esperado: deploy.resources.limits com cpus e memory
+  FAIL     db         porta-loopback       esperado: portas publicadas apenas em 127.0.0.1
+  FAIL     db         usuario-nao-root     esperado: user definido e diferente de root
+  FAIL     db         imagem-fixada        esperado: imagem com digest (@sha256) ou build local
+  FAIL     db         segredo-via-env      esperado: segredos interpolados do .env ['POSTGRES_PASSWORD']
+  FAIL     db         banco-sem-porta      esperado: banco sem porta publicada no host
+  FAIL     db         banco-rede-interna   esperado: banco so em redes internal ['default']
+  FAIL     web        read-only            esperado: read_only: true
+  FAIL     web        cap-drop             esperado: cap_drop: [ALL]
+  FAIL     web        no-new-privileges    esperado: security_opt: [no-new-privileges:true]
+  FAIL     web        healthcheck          esperado: healthcheck definido
+  FAIL     web        limites              esperado: deploy.resources.limits com cpus e memory
+  FAIL     web        sem-docker-sock      esperado: docker.sock nao montado
+  FAIL     web        porta-loopback       esperado: portas publicadas apenas em 127.0.0.1
+  FAIL     web        usuario-nao-root     esperado: user definido e diferente de root
+  FAIL     web        segredo-via-env      esperado: segredos interpolados do .env ['ADMIN_PASSWORD', 'TASKFLOW_SECRET_KEY']
+
+20 falha(s) de politica.
+
+# scripts/check-compose.py docker-compose.yml docker-compose.observability.yml (depois)
+== docker-compose.yml
+  PASS     db         read-only            read_only: true
+  PASS     db         cap-drop             cap_drop: [ALL]
+  PASS     db         no-new-privileges    security_opt: [no-new-privileges:true]
+  PASS     db         healthcheck          healthcheck definido
+  PASS     db         limites              deploy.resources.limits com cpus e memory
+  PASS     db         nao-privilegiado     sem privileged: true
+  PASS     db         rede-propria         sem network_mode/pid host
+  PASS     db         sem-docker-sock      docker.sock nao montado
+  PASS     db         porta-loopback       portas publicadas apenas em 127.0.0.1
+  PASS     db         usuario-nao-root     user definido e diferente de root
+  PASS     db         imagem-fixada        imagem com digest (@sha256) ou build local
+  PASS     db         segredo-via-env      segredos interpolados do .env 
+  PASS     db         banco-sem-porta      banco sem porta publicada no host
+  PASS     db         banco-rede-interna   banco so em redes internal 
+  PASS     web        read-only            read_only: true
+  PASS     web        cap-drop             cap_drop: [ALL]
+  PASS     web        no-new-privileges    security_opt: [no-new-privileges:true]
+  PASS     web        healthcheck          healthcheck definido
+  PASS     web        limites              deploy.resources.limits com cpus e memory
+  PASS     web        nao-privilegiado     sem privileged: true
+  PASS     web        rede-propria         sem network_mode/pid host
+  PASS     web        sem-docker-sock      docker.sock nao montado
+  PASS     web        porta-loopback       portas publicadas apenas em 127.0.0.1
+  PASS     web        usuario-nao-root     user definido e diferente de root
+  PASS     web        imagem-fixada        imagem com digest (@sha256) ou build local
+  PASS     web        segredo-via-env      segredos interpolados do .env 
+== docker-compose.observability.yml
+  PASS     grafana    read-only            read_only: true
+  PASS     grafana    cap-drop             cap_drop: [ALL]
+  PASS     grafana    no-new-privileges    security_opt: [no-new-privileges:true]
+  PASS     grafana    healthcheck          healthcheck definido
+  PASS     grafana    limites              deploy.resources.limits com cpus e memory
+  PASS     grafana    nao-privilegiado     sem privileged: true
+  PASS     grafana    rede-propria         sem network_mode/pid host
+  PASS     grafana    sem-docker-sock      docker.sock nao montado
+  PASS     grafana    porta-loopback       portas publicadas apenas em 127.0.0.1
+  PASS     grafana    usuario-nao-root     user definido e diferente de root
+  PASS     grafana    imagem-fixada        imagem com digest (@sha256) ou build local
+  PASS     grafana    segredo-via-env      segredos interpolados do .env 
+  PASS     loki       read-only            read_only: true
+  PASS     loki       cap-drop             cap_drop: [ALL]
+  PASS     loki       no-new-privileges    security_opt: [no-new-privileges:true]
+  PASS     loki       healthcheck          healthcheck definido
+  PASS     loki       limites              deploy.resources.limits com cpus e memory
+  PASS     loki       nao-privilegiado     sem privileged: true
+  PASS     loki       rede-propria         sem network_mode/pid host
+  PASS     loki       sem-docker-sock      docker.sock nao montado
+  PASS     loki       porta-loopback       portas publicadas apenas em 127.0.0.1
+  PASS     loki       usuario-nao-root     user definido e diferente de root
+  PASS     loki       imagem-fixada        imagem com digest (@sha256) ou build local
+  PASS     loki       segredo-via-env      segredos interpolados do .env 
+  PASS     promtail   read-only            read_only: true
+  PASS     promtail   cap-drop             cap_drop: [ALL]
+  PASS     promtail   no-new-privileges    security_opt: [no-new-privileges:true]
+  PASS     promtail   healthcheck          healthcheck definido
+  PASS     promtail   limites              deploy.resources.limits com cpus e memory
+  PASS     promtail   nao-privilegiado     sem privileged: true
+  PASS     promtail   rede-propria         sem network_mode/pid host
+  PASS     promtail   sem-docker-sock      docker.sock nao montado
+  PASS     promtail   porta-loopback       portas publicadas apenas em 127.0.0.1
+  EXCECAO  promtail   usuario-nao-root     Os arquivos /var/lib/docker/containers/*/*-json.log pertencem ao root (0640). O container ...
+  PASS     promtail   imagem-fixada        imagem com digest (@sha256) ou build local
+  PASS     promtail   segredo-via-env      segredos interpolados do .env 
+
+0 falha(s) de politica.
