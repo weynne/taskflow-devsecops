@@ -1,0 +1,4 @@
+/* Estilos da TaskFlow. Ficam em arquivo estatico (e nao inline) porque a
+   Content-Security-Policy so permite folhas de estilo do proprio dominio. */
+body { font-family: sans-serif; margin: 2rem; }
+.erro { color: #b00020; }
