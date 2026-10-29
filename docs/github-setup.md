@@ -79,6 +79,8 @@ para a montagem não depender da disponibilidade dos colegas.
     - `SCA - pip-audit`
     - `SCA - Trivy fs`
     - `Imagem - build, Trivy e smoke test`
+    - Atividade 2 (ver seção 8): `DAST - ZAP Baseline + XSS`, `IaC - Terraform validate`,
+      `IaC - Checkov`, `IaC - Trivy config`, `IaC - Politica do Compose`
 - [x] **Do not allow bypassing the above settings** (vale também para administradores)
 - [ ] Allow force pushes / Allow deletions: **desmarcados**
 
@@ -105,7 +107,7 @@ portão, e dá para mostrá-la ao vivo.
 
 **Settings → Code security**: habilite **Dependency graph**, **Dependabot alerts** e
 **Dependabot security updates**. O `.github/dependabot.yml` já cuida das atualizações de
-versão (pip, actions e docker).
+versão (pip, actions, docker, docker-compose e terraform).
 
 ## 7. Evidências para a entrega
 
@@ -113,3 +115,22 @@ versão (pip, actions e docker).
 - PR de demonstração do shift-left com o gate vermelho e o merge bloqueado
   ([roteiro](apresentacao.md)).
 - Print da tela de branch protection **já na fase 2** (aprovação + Code Owners ligados).
+
+## 8. Atividade 2: novos workflows e checks obrigatórios
+
+1. Abra o PR da branch `feat/atividade-2` para a `main`. Os workflows `DAST` e `IaC` rodam
+   pela primeira vez **no próprio PR** e passam a aparecer na lista de checks.
+2. **Settings → Branches → regra da `main`** → em *Require status checks*, adicione:
+   - `DAST - ZAP Baseline + XSS`
+   - `IaC - Terraform validate`
+   - `IaC - Checkov`
+   - `IaC - Trivy config`
+   - `IaC - Politica do Compose`
+
+   São **12 checks obrigatórios** no total. Nenhum dos workflows novos usa filtro `paths:`,
+   então todos rodam em todo PR e nunca ficam "Expected — waiting for status"
+   ([por quê](iac.md#por-que-o-iac-scanyml-não-tem-filtro-paths)).
+3. Nenhum secret novo é necessário: o DAST gera senhas e `SECRET_KEY` efêmeras dentro do
+   run (com `::add-mask::`), e o IaC não usa credencial de nuvem.
+4. Depois do merge, copie para o README os links de um run verde de `DAST` e de `IaC` na
+   `main`.

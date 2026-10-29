@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>Minhas tarefas ({{ username }})</h1>
+{# Sink do exercicio do Encontro 9: o parametro q volta escapado no atributo value. #}
 <form method="get">
   <input type="text" name="q" placeholder="buscar tarefa" value="{{ search }}">
   <input type="submit" value="Buscar">

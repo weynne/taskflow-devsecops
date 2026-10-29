@@ -33,3 +33,21 @@ updates:
     labels: ["dependencies", "docker"]
     commit-message:
       prefix: "build"
+
+  # Imagens do docker-compose.yml e da stack de observabilidade (tag + digest).
+  - package-ecosystem: "docker-compose"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels: ["dependencies", "docker"]
+    commit-message:
+      prefix: "build"
+
+  # Provider AWS do Terraform (versions.tf + .terraform.lock.hcl).
+  - package-ecosystem: "terraform"
+    directory: "/infra"
+    schedule:
+      interval: "weekly"
+    labels: ["dependencies", "iac"]
+    commit-message:
+      prefix: "iac"

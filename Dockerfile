@@ -52,6 +52,7 @@ COPY --from=build /opt/venv /opt/venv
 # Apenas /app/data (banco SQLite) e gravavel pelo usuario taskflow.
 COPY app.py wsgi.py ./
 COPY templates/ templates/
+COPY static/ static/
 
 # CORRIGIDO (FALHA 4): nenhum segredo em ENV/ARG. TASKFLOW_SECRET_KEY e
 # ADMIN_PASSWORD sao injetados em tempo de execucao (docker run -e / secrets
@@ -71,6 +72,9 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
 # --worker-tmp-dir em /dev/shm permite rodar com filesystem read-only e
 # --no-control-socket desliga o socket de administracao do gunicorn (nao
 # usado aqui; seria mais uma interface exposta dentro do container).
+# Sem --access-logfile: a propria aplicacao emite um evento JSON
+# "http_request" por requisicao (com request_id), e o stdout fica 100% JSON
+# para o Promtail/Loki (Modulo 6).
 CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "--preload", \
      "--worker-tmp-dir", "/dev/shm", "--no-control-socket", \
-     "--access-logfile", "-", "wsgi:app"]
+     "wsgi:app"]
