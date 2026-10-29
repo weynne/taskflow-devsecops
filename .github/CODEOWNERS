@@ -27,3 +27,21 @@
 /.dockerignore          @diegotavares16 @weynne
 /.trivyignore           @diegotavares16 @weynne
 /scripts/               @diegotavares16 @weynne
+
+# --- Atividade 2 -------------------------------------------------------------
+# DAST: regras do ZAP e script do scan (a correcao do XSS fica em app/templates).
+/.zap/                          @jessicacamarco @weynne
+/scripts/dast-scan.sh           @jessicacamarco @weynne
+
+# IaC: Terraform, Compose da aplicacao e a politica que o verifica.
+/infra/                         @diegotavares16 @weynne
+/docker-compose.yml             @diegotavares16 @weynne
+/.env.example                   @diegotavares16 @weynne
+/requirements-iac.txt           @diegotavares16 @weynne
+/scripts/check-compose.py       @diegotavares16 @weynne
+
+# Observabilidade e resposta a incidente.
+/observability/                     @weynne @jessicacamarco
+/docker-compose.observability.yml   @weynne @jessicacamarco
+/scripts/simular-forca-bruta.py     @weynne @jessicacamarco
+/docs/runbook-login-bruteforce.md   @weynne @jessicacamarco
