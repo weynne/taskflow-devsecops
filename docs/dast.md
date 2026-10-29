@@ -119,3 +119,7 @@ No PR, o check `DAST - ZAP Baseline + XSS` fica vermelho e a branch protection b
 merge. O `Testes (pytest)` também reprova, pelo `test_templates_nao_desligam_o_autoescape`
 (defesa em profundidade). Ao reverter a mudança, os dois voltam a ficar verdes. Passo a passo
 em [`apresentacao-atividade2.md`](apresentacao-atividade2.md).
+
+**Executado no GitHub:** [PR #20](https://github.com/weynne/taskflow-devsecops/pull/20). O negativo deixou vermelhos o DAST, o
+pytest e também o Semgrep (`template-unescaped-with-safe`); o revert voltou a 12/12 verdes.
+Links dos runs em [`evidencias/demos-negativo-positivo.md`](evidencias/demos-negativo-positivo.md).

@@ -129,7 +129,11 @@ ao OWASP Top 10 2025) e [`docs/iac.md`](docs/iac.md).
 | 3 | Terraform: Checkov 17 → 0 FAILED, Trivy 13 → 0 | [`checkov-terraform-antes.txt`](docs/evidencias/checkov-terraform-antes.txt) · [`checkov-trivy-terraform-depois.txt`](docs/evidencias/checkov-trivy-terraform-depois.txt) |
 | 4 | Compose: política 20 → 0 falhas; isolamento verificado em execução | [`compose-politica.txt`](docs/evidencias/compose-politica.txt) · [`compose-verificacao.txt`](docs/evidencias/compose-verificacao.txt) |
 | 5 | Força bruta simulada, detectada pela query do runbook, alerta disparado, contenção executada | [`forca-bruta-deteccao.txt`](docs/evidencias/forca-bruta-deteccao.txt) |
-| 6 | Runs de `DAST` e `IaC` no GitHub Actions | *preencher após o PR da Atividade 2* |
+| 6 | **Gate de DAST, negativo → positivo**: PR reabre o XSS → DAST, pytest e Semgrep vermelhos e merge bloqueado → revert → 12/12 verdes | [PR #20](https://github.com/weynne/taskflow-devsecops/pull/20) · [DAST vermelho](https://github.com/weynne/taskflow-devsecops/actions/runs/40798277508) · [DAST verde](https://github.com/weynne/taskflow-devsecops/actions/runs/40798549203) |
+| 7 | **Gates de IaC, negativo → positivo**: PR deixa o bucket público e expõe o banco → Checkov, Trivy config e política do Compose vermelhos → revert → 12/12 verdes | [PR #21](https://github.com/weynne/taskflow-devsecops/pull/21) · [IaC vermelho](https://github.com/weynne/taskflow-devsecops/actions/runs/40798282423) · [IaC verde](https://github.com/weynne/taskflow-devsecops/actions/runs/40798549010) |
+| 8 | Esteira completa verde na `main` após o merge da Atividade 2 | [PR #14](https://github.com/weynne/taskflow-devsecops/pull/14) · [DAST](https://github.com/weynne/taskflow-devsecops/actions/runs/40798180258) · [IaC](https://github.com/weynne/taskflow-devsecops/actions/runs/40798180131) · [CI](https://github.com/weynne/taskflow-devsecops/actions/runs/40798180305) |
+
+Detalhes e trechos dos logs de cada demo: [`docs/evidencias/demos-negativo-positivo.md`](docs/evidencias/demos-negativo-positivo.md).
 
 ### Atividade 1
 
